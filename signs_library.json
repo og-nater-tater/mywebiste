@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "created": "2025-06-22T11:55:35.686Z",
+  "modified": "2025-06-22T11:55:35.686Z",
+  "signs": [
+    {
+      "id": "7fd9c422-dd70-48e8-b799-b876309d8e99",
+      "name": "TC-1",
+      "commonName": "Road Work Ahead",
+      "imageData": "data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f0f0f0\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">No Image</text></svg>"
+    },
+    {
+      "id": "0821a5fc-88a5-47d9-9608-bac1857aee8f",
+      "name": "TC-2A",
+      "commonName": "Construction 800m",
+      "imageData": "data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f0f0f0\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">No Image</text></svg>"
+    },
+    {
+      "id": "ffe3903b-82c9-4791-b21e-6643749357a3",
+      "name": "TC-2B",
+      "commonName": "Construction 400m",
+      "imageData": "data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f0f0f0\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">No Image</text></svg>"
+    },
+    {
+      "id": "4f261a2d-cfdc-448d-83be-9b8f3ff1d5db",
+      "name": "TC-4",
+      "commonName": "Lane Ends",
+      "imageData": "data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f0f0f0\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">No Image</text></svg>"
+    },
+    {
+      "id": "d8c645c7-a1d5-4603-bf0d-43308731cb61",
+      "name": "TC-21",
+      "commonName": "Construction Ahead",
+      "imageData": "data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f0f0f0\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">No Image</text></svg>"
+    },
+    {
+      "id": "6354712a-81fb-4276-8241-113e3182f910",
+      "name": "TC-22",
+      "commonName": "Flagperson Ahead",
+      "imageData": "data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f0f0f0\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">No Image</text></svg>"
+    },
+    {
+      "id": "1888c32a-7de4-411d-9d33-62b9c6905a54",
+      "name": "Ra-1",
+      "commonName": "Stop",
+      "imageData": "data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f0f0f0\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">No Image</text></svg>"
+    },
+    {
+      "id": "43ca13b1-60a0-40c1-83f8-114f90e09c3e",
+      "name": "Ra-2",
+      "commonName": "Yield",
+      "imageData": "data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"100\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"%23f0f0f0\"/><text x=\"50\" y=\"50\" text-anchor=\"middle\" dy=\".3em\" font-family=\"Arial\" font-size=\"12\" fill=\"%23999\">No Image</text></svg>"
+    }
+  ],
+  "routes": [],
+  "permanentDiaryLogs": [],
+  "dailyDiaryLogs": [],
+  "trafficPlans": [],
+  "metadata": {
+    "signsCount": 8,
+    "autoCreated": true,
+    "description": "Default signs library with basic traffic control signs"
+  }
+}

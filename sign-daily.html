@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Construction Sign Diaries</title>
+
+  <!-- Styles (CSS) -->
+  <style>
+    /* Reset & Base */
+    * { box-sizing: border-box; margin:0; padding:0 }
+    html, body { height:100% }
+    body {
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+      background:#f2f4f8; color:#333;
+      display:flex; overflow:hidden;
+    }
+    a { text-decoration:none; color:inherit }
+    button,input,select,textarea { font-family:inherit; font-size:.95rem }
+
+    /* Sidebar */
+    #sidebar {
+      width:220px; background:#00345b; color:#fff; flex-shrink:0;
+      border-right:2px solid #0a4471;
+    }
+    body.sidebar-collapsed #sidebar { display:none }
+    #sidebar h2 {
+      margin:1rem; font-size:1.25rem; font-weight:600;
+      border-bottom:1px solid rgba(255,255,255,.2); padding-bottom:.5rem;
+    }
+    #sidebar nav { display:flex; flex-direction:column }
+    #sidebar nav button {
+      background:none; border:none; color:#fff;
+      padding:.75rem 1rem; text-align:left; cursor:pointer;
+      border-top:1px solid rgba(255,255,255,.1); transition:background .2s;
+    }
+    #sidebar nav button.active,
+    #sidebar nav button:hover { background:#005a9c }
+
+    /* Main */
+    #main { flex-grow:1; overflow-y:auto; padding:1.5rem 2rem }
+    #toggle-sidebar {
+      background:#005a9c; color:#fff; border:none;
+      padding:.5rem 1rem; border-radius:4px; cursor:pointer;
+      margin-bottom:1rem; transition:.2s;
+    }
+    #toggle-sidebar:hover { background:#00417c }
+    #quit-app-btn:hover { background:#c82333 }
+    .section { display:none }
+    .section.active { display:block }
+    h1 { color:#00345b; font-size:1.5rem; margin-bottom:1rem }
+    h2,h3 { color:#00345b; font-size:1.15rem; margin-bottom:.5rem }
+
+    /* Forms */
+    .form-group { margin-bottom:1rem }
+    .form-group label {
+      display:block; font-weight:500; margin-bottom:.25rem; color:#00345b
+    }
+    .form-group input[type="text"],
+    .form-group input[type="date"],
+    .form-group select {
+      width:100%; padding:.5rem .6rem; border:1px solid #ccc;
+      border-radius:5px; background:#fff; transition:border-color .2s
+    }
+    .form-group input:focus,
+    .form-group select:focus { outline:none; border-color:#005a9c }
+    .btn {
+      background:#005a9c; color:#fff; border:none;
+      padding:.55rem 1.1rem; border-radius:5px; cursor:pointer;
+      margin-bottom:.5rem; transition:.2s;
+    }
+    .btn:hover { background:#00417c }
+    .btn:disabled { background:#999; cursor:not-allowed }
+    .btn.secondary {
+      background:#6c757d; color:#fff;
+    }
+    .btn.secondary:hover { background:#5a6268 }
+    .btn.success {
+      background:#28a745; color:#fff;
+    }
+    .btn.success:hover { background:#218838 }
+
+    /* Lists & Tables */
+    .item-list {
+      margin-top:.5rem; max-height:300px; overflow-y:auto;
+      background:#fff; border:1px solid #ccc; border-radius:5px
+    }
+    .item-list div {
+      padding:.6rem 1rem; border-bottom:1px solid #eee;
+      display:flex; justify-content:space-between; align-items:center;
+      transition:background .2s
+    }
+    .item-list div:last-child { border-bottom:none }
+    .item-list div:hover { background:#f4f6f8 }
+    .item-list button {
+      background:none; border:none; color:#d00; cursor:pointer;
+      transition:.2s
+    }
+    .item-list button:hover { color:#b00; text-decoration:underline }
+
+    table {
+      width:100%; border-collapse:collapse; background:#fff;
+      margin:.75rem 0 1.25rem; border-radius:5px; overflow:hidden
+    }
+    table th, table td {
+      border:1px solid #ccc; padding:.6rem .8rem; text-align:left
+    }
+    table th { background:#e1eaf8; color:#00345b; font-weight:600 }
+
+    /* Perm cards */
+    #perm-grid {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+      gap:1rem; margin-top:1rem;
+      align-items: start;
+    }
+    .perm-card {
+      background:#fff; border:1px solid #ccc; border-radius:8px;
+      padding:.75rem; display:flex; flex-direction:column; gap:.5rem;
+      box-shadow:0 1px 3px rgba(0,0,0,.1); transition:.2s;
+      height: fit-content;
+    }
+    .perm-card:hover { box-shadow:0 2px 6px rgba(0,0,0,.12) }
+    .perm-card img {
+      width:100%; height:80px; object-fit:contain;
+      border:1px solid #ddd; border-radius:4px; background:#fafafa
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,.4); display:none;
+      justify-content:center; align-items:center; z-index:1000
+    }
+    .modal {
+      background:#fff; border-radius:8px; padding:1.5rem;
+      width:90%; max-width:420px; position:relative;
+      box-shadow:0 2px 12px rgba(0,0,0,.2)
+    }
+    .modal .close-modal {
+      position:absolute; top:.5rem; right:.75rem;
+      background:none; border:none; font-size:1.25rem; cursor:pointer;
+      transition:.2s
+    }
+    .modal .close-modal:hover { color:#900 }
+
+    /* Autocomplete */
+    #daily-sign-suggestions {
+      position:absolute; top:100%; left:0; right:0; background:#fff;
+      border:1px solid #ccc; border-top:none; border-radius:0 0 5px 5px;
+      max-height:180px; overflow-y:auto; z-index:10
+    }
+    .suggestion-item {
+      padding:.5rem; display:flex; align-items:center; cursor:pointer;
+      transition:.2s
+    }
+    .suggestion-item:hover { background:#eef1f5 }
+    .suggestion-item img {
+      width:30px; height:30px; object-fit:cover; margin-right:.5rem;
+      border:1px solid #ddd; border-radius:4px
+    }
+
+    /* Notification styles */
+    .notification {
+      position:fixed; top:20px; right:20px; z-index:1001;
+      background:#28a745; color:#fff; padding:1rem 1.5rem;
+      border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.2);
+      transform:translateX(100%); transition:transform .3s;
+    }
+    .notification.show { transform:translateX(0) }
+    .notification.warning {
+      background:#ffc107; color:#212529;
+    }
+
+    /* Dismissible banner styles */
+    .info-banner {
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      border: 1px solid #90caf9;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #1565c0;
+      position: relative;
+      display: block;
+      transition: all 0.3s ease;
+    }
+    .info-banner.hidden {
+      display: none;
+    }
+    .info-banner strong {
+      color: #0d47a1;
+    }
+    .info-banner .close-banner {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.75rem;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #1565c0;
+      transition: color 0.2s;
+    }
+    .info-banner .close-banner:hover {
+      color: #0d47a1;
+    }
+
+    /* File upload styles */
+    .file-upload-area {
+      border: 2px dashed #005a9c;
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      background: #f8f9fa;
+      margin: 1rem 0;
+      transition: all 0.3s ease;
+    }
+    .file-upload-area:hover {
+      background: #e9ecef;
+      border-color: #00417c;
+    }
+    .file-upload-area.dragover {
+      background: #e3f2fd;
+      border-color: #1976d2;
+    }
+    .file-input {
+      display: none;
+    }
+
+    /* Import/Export section */
+    .import-export-section {
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+    }
+    .import-export-section h3 {
+      margin-bottom: 1rem;
+      color: #00345b;
+      border-bottom: 2px solid #e1eaf8;
+      padding-bottom: 0.5rem;
+    }
+    .button-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <h2>Menu</h2>
+    <nav>
+      <button id="nav-library" class="active">1. Sign Library</button>
+      <button id="nav-routes">2. Permanent Routes</button>
+      <button id="nav-inspections">3. Inspections</button>
+      <button id="nav-traffic-plans">4. Traffic Control Plans</button>
+      <button id="nav-reports">5. Reports</button>
+    </nav>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <!-- File Management Banner -->
+    <div id="file-banner" class="info-banner">
+      <button class="close-banner" id="dismiss-banner-btn">&times;</button>
+      <strong>📁 Smart File Loading:</strong> The app automatically looks for JSON files in its directory (signs_library.json, signs.json, etc.) and loads them. If none found, it creates a default library.
+      <span id="current-file-status">Checking directory...</span>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <button id="toggle-sidebar">☰ Menu</button>
+      <button id="quit-app-btn" style="background:#dc3545;color:#fff;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer;transition:.2s">
+        ⚡ Quit App
+      </button>
+    </div>
+
+    <!-- Section 1: Sign Library -->
+    <section id="section-library" class="section active">
+      <h1>1. Sign Library</h1>
+      
+      <!-- File Management Section -->
+      <div class="import-export-section">
+        <h3>📁 Signs Library File Management</h3>
+        
+        <div style="margin-bottom: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 6px; font-size: 0.9rem; border-left: 4px solid #2196f3;">
+          <strong>💡 Auto-Loading:</strong> Place <code>signs_library.json</code> in the same folder as this HTML file for automatic loading on startup. 
+          The app checks for: <code>signs_library.json</code>, <code>signs.json</code>, <code>construction_signs.json</code>, or <code>default_signs.json</code>.
+        </div>
+        
+        <div class="button-group">
+          <button id="load-signs-file-btn" class="btn success">📂 Load Different File</button>
+          <button id="create-new-library-btn" class="btn success">🆕 Create New Library</button>
+          <button id="save-signs-file-btn" class="btn" disabled>💾 Save Changes</button>
+          <button id="save-as-signs-file-btn" class="btn secondary" disabled>💾 Save As...</button>
+        </div>
+        
+        <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 6px; font-size: 0.9rem;">
+          <strong>Current File:</strong> <span id="current-filename">None loaded</span><br>
+          <strong>Signs Count:</strong> <span id="current-signs-count">0</span><br>
+          <strong>Last Modified:</strong> <span id="last-modified">Never</span>
+        </div>
+        
+        <!-- File Input (Hidden) -->
+        <input type="file" id="signs-file-input" class="file-input" accept=".json">
+        
+        <!-- Quick Actions -->
+        <div style="margin-top: 1rem;">
+          <h4 style="margin-bottom: 0.5rem; color: #00345b;">Quick Actions:</h4>
+          <div class="button-group">
+            <button id="load-sample-btn" class="btn secondary">🎯 Load Extended Sample</button>
+            <button id="clear-library-btn" class="btn" style="background:#dc3545" disabled>🗑️ Clear Library</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <input type="text" id="sign-search" placeholder="Search by technical or common name…"/>
+        <button id="open-add-sign-btn" class="btn">Add New Sign</button>
+      </div>
+      <h2>Existing Signs (<span id="sign-count">0</span>)</h2>
+      <div id="sign-list" class="item-list"></div>
+    </section>
+
+    <!-- Section 2: Permanent Routes -->
+    <section id="section-routes" class="section">
+      <h1>2. Permanent Routes</h1>
+      <h2>Create / Edit Route</h2>
+      <form id="route-form" style="background:#fff;padding:1rem;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1)">
+        <div class="form-group">
+          <label for="route-name">Route Name</label>
+          <input type="text" id="route-name" required placeholder="Job #1234"/>
+        </div>
+        <table>
+          <thead><tr>
+            <th>Sign</th><th>Station</th><th>Highway</th><th>End</th><th>Remove</th>
+          </tr></thead>
+          <tbody id="route-entries-body"></tbody>
+        </table>
+        <button id="add-route-entry-btn" class="btn" type="button">+ Add Entry</button>
+        <button type="submit" class="btn">Save Route</button>
+      </form>
+      <hr style="margin:2rem 0;border-color:#ddd"/>
+      <h2>Existing Routes</h2>
+      <div id="route-list" class="item-list"></div>
+    </section>
+
+    <!-- Section 3: Inspections -->
+    <section id="section-inspections" class="section">
+      <h1>3. Inspections</h1>
+
+      <!-- Permanent Diary -->
+      <section style="background:#fff;padding:1rem;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:2rem">
+        <h2>Permanent Diary</h2>
+        <div id="perm-select-div">
+          <div class="form-group">
+            <label for="perm-route-select">Select a Route</label>
+            <select id="perm-route-select"><option value="">-- Select --</option></select>
+          </div>
+          <button id="start-perm-inspection-btn" class="btn" type="button" disabled>Start Inspection</button>
+        </div>
+        <div id="perm-inspect-div" style="display:none;margin-top:1rem">
+          <h3 id="perm-inspect-title"></h3>
+          <div id="perm-grid"></div>
+          <button id="save-permanent-btn" class="btn" type="button" style="margin-top:1rem">
+            Finish & Download Permanent PDF
+          </button>
+        </div>
+      </section>
+
+      <!-- Daily Diary -->
+      <section style="background:#fff;padding:1rem;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);position:relative">
+        <h2>Daily‐Changing Diary</h2>
+        <form id="daily-entry-form" style="margin-bottom:1rem">
+          <div style="display:flex;gap:1rem">
+            <div class="form-group" style="flex:2;position:relative">
+              <label for="daily-sign-search">Sign Type</label>
+              <input type="text" id="daily-sign-search" placeholder="Search sign…" autocomplete="off"/>
+              <input type="hidden" id="daily-sign-id"/>
+              <div id="daily-sign-suggestions" style="display:none"></div>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label for="daily-station">Station</label>
+              <input type="text" id="daily-station" placeholder="10+100.00" maxlength="9"/>
+            </div>
+            <div class="form-group" style="flex:1">
+              <label for="daily-highway">Highway</label>
+              <input type="text" id="daily-highway" placeholder="e.g., HWY 401 E"/>
+            </div>
+          </div>
+          <div style="display:flex;gap:0.5rem">
+            <button id="add-daily-entry-btn" class="btn" type="button">+ Add Entry</button>
+            <button id="reload-last-diary-btn" class="btn secondary" type="button">📋 Reload Last Diary</button>
+          </div>
+        </form>
+        <table>
+          <thead><tr><th>Image</th><th>Name</th><th>Station</th><th>Highway</th><th>Actions</th></tr></thead>
+          <tbody id="daily-diary-body"></tbody>
+        </table>
+        <button id="save-daily-btn" class="btn" type="button">Finish & Download Daily PDF</button>
+
+        <h2 style="margin-top:2rem">Past Inspections</h2>
+        <div id="inspection-list" class="item-list"></div>
+      </section>
+    </section>
+
+    <!-- Section 4: Traffic Control Plans -->
+    <section id="section-traffic-plans" class="section">
+      <h1>4. Traffic Control Plans</h1>
+      
+      <!-- TS-15 Form -->
+      <section style="background:#fff;padding:1.5rem;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1);margin-bottom:2rem">
+        <h2>TS-15: Lane Closed or Occupied (Traffic Control Persons)</h2>
+        <p style="color:#666;margin-bottom:1rem">Reference the official Ontario Traffic Manual document below and fill in station values for your traffic control setup.</p>
+        
+        <!-- PDF Reference and Form in side-by-side layout -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2rem">
+          
+          <!-- Left: PDF Reference -->
+          <div>
+            <h3 style="margin-bottom:1rem;color:#00345b">Ontario Traffic Manual Reference</h3>
+            <div style="border:2px solid #dee2e6;border-radius:8px;background:#f8f9fa;height:600px;overflow:hidden;position:relative">
+              <!-- PDF Embed placeholder -->
+              <div style="width:100%;height:100%;background:url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 800 600\"><rect width=\"800\" height=\"600\" fill=\"%23f8f9fa\"/><text x=\"400\" y=\"50\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"16\" font-weight=\"bold\" fill=\"%23000\">ONTARIO TRAFFIC MANUAL · BOOK 7 - APRIL 2022</text><text x=\"400\" y=\"80\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"14\" fill=\"%23666\">TS-15: Lane Closed or Occupied (Traffic Control Persons)</text><rect x=\"50\" y=\"100\" width=\"700\" height=\"450\" fill=\"%23fff\" stroke=\"%23ccc\" stroke-width=\"2\"/><text x=\"400\" y=\"130\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"12\" fill=\"%23333\">Reference Diagram Shows:</text><text x=\"70\" y=\"160\" font-family=\"Arial\" font-size=\"11\" fill=\"%23333\">• Sign placement positions and distances</text><text x=\"70\" y=\"180\" font-family=\"Arial\" font-size=\"11\" fill=\"%23333\">• Traffic control person locations</text><text x=\"70\" y=\"200\" font-family=\"Arial\" font-size=\"11\" fill=\"%23333\">• Lane closure taper requirements</text><text x=\"70\" y=\"220\" font-family=\"Arial\" font-size=\"11\" fill=\"%23333\">• Work zone setup standards</text><rect x=\"300\" y=\"250\" width=\"200\" height=\"100\" fill=\"%23ff6b6b\" stroke=\"%23d63031\" stroke-width=\"2\"/><text x=\"400\" y=\"290\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"12\" font-weight=\"bold\" fill=\"%23fff\">WORK AREA</text><text x=\"400\" y=\"310\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"10\" fill=\"%23fff\">Lane Closed/Occupied</text><circle cx=\"150\" cy=\"180\" r=\"20\" fill=\"%23ffa500\" stroke=\"%23ff8c00\" stroke-width=\"2\"/><text x=\"150\" y=\"185\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"8\" font-weight=\"bold\">TC-2B</text><circle cx=\"150\" cy=\"220\" r=\"20\" fill=\"%23ffa500\" stroke=\"%23ff8c00\" stroke-width=\"2\"/><text x=\"150\" y=\"225\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"8\" font-weight=\"bold\">TC-21</text><circle cx=\"150\" cy=\"260\" r=\"20\" fill=\"%23ffeb3b\" stroke=\"%23ffc107\" stroke-width=\"2\"/><text x=\"150\" y=\"265\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"8\" font-weight=\"bold\">TC-22</text><circle cx=\"550\" cy=\"200\" r=\"20\" fill=\"%23ffa500\" stroke=\"%23ff8c00\" stroke-width=\"2\"/><text x=\"550\" y=\"205\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"8\" font-weight=\"bold\">TC-4</text><text x=\"400\" y=\"500\" text-anchor=\"middle\" font-family=\"Arial\" font-size=\"10\" fill=\"%23666\">Click \"View Full PDF\" below to see complete details</text></svg>') center/contain no-repeat">
+              </div>
+              <button onclick="window.open('#','_blank')" style="position:absolute;bottom:10px;right:10px;background:#00345b;color:white;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;font-size:12px">
+                View Full PDF
+              </button>
+            </div>
+          </div>
+          
+          <!-- Right: Station Input Form -->
+          <div>
+            <h3 style="margin-bottom:1rem;color:#00345b">Station Values</h3>
+            <form id="ts15-form">
+              
+              <div class="form-group">
+                <label for="work-area-start" title="Starting station of the work area" style="border-left: 4px solid #28A745; padding-left: 8px;">Work Area Start Station:</label>
+                <input type="text" id="work-area-start" placeholder="10+000.00" maxlength="9"/>
+              </div>
+              
+              <div class="form-group">
+                <label for="sign-tc2b" title="Station for first advance warning sign (TC-2B or TC-2A)" style="border-left: 4px solid #FFA500; padding-left: 8px;">TC-2B/TC-2A Station:</label>
+                <input type="text" id="sign-tc2b" placeholder="10+000.00" maxlength="9"/>
+              </div>
+              
+              <div class="form-group">
+                <label for="sign-rb31" title="Station for regulatory speed sign (if NPRS 70+ km/h)" style="border-left: 4px solid #DC3545; padding-left: 8px;">Rb-31 Station (if applicable):</label>
+                <input type="text" id="sign-rb31" placeholder="10+000.00" maxlength="9"/>
+              </div>
+              
+              <div class="form-group">
+                <label for="sign-tc21" title="Station for construction ahead sign" style="border-left: 4px solid #FFA500; padding-left: 8px;">TC-21 Station:</label>
+                <input type="text" id="sign-tc21" placeholder="10+000.00" maxlength="9"/>
+              </div>
+              
+              <div class="form-group">
+                <label for="sign-tc22" title="Station for flagperson ahead sign with SLOW paddle" style="border-left: 4px solid #FFEB3B; padding-left: 8px;">TC-22 Station:</label>
+                <input type="text" id="sign-tc22" placeholder="10+000.00" maxlength="9"/>
+              </div>
+              
+              <div class="form-group">
+                <label for="tcp-taper-start" title="Starting station of TCP taper" style="border-left: 4px solid #6C757D; padding-left: 8px;">TCP Taper Start:</label>
+                <input type="text" id="tcp-taper-start" placeholder="10+000.00" maxlength="9"/>
+              </div>
+              
+              <div class="form-group">
+                <label for="sign-tc4" title="Station for lane ends sign" style="border-left: 4px solid #FFA500; padding-left: 8px;">TC-4 Station:</label>
+                <input type="text" id="sign-tc4" placeholder="10+000.00" maxlength="9"/>
+              </div>
+              
+              <!-- Project Information -->
+              <hr style="margin:1.5rem 0;border-color:#ddd"/>
+              <h4 style="margin-bottom:1rem;color:#00345b">Project Information</h4>
+              
+              <div class="form-group">
+                <label for="highway-name">Highway:</label>
+                <input type="text" id="highway-name" placeholder="e.g., HWY 401 E"/>
+              </div>
+              
+              <div class="form-group">
+                <label for="project-date">Date:</label>
+                <input type="date" id="project-date"/>
+              </div>
+              
+              <div class="form-group">
+                <label for="inspector-name">Inspector Name:</label>
+                <input type="text" id="inspector-name" placeholder="Full Name"/>
+              </div>
+              
+              <div style="margin-top:2rem">
+                <button type="button" id="generate-ts15-btn" class="btn">Generate TS-15 PDF</button>
+                <button type="button" id="preview-ts15-btn" class="btn" style="background:#666;margin-left:0.5rem">Preview Layout</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        <!-- Preview Area -->
+        <div id="ts15-preview" style="display:none;margin-top:2rem;padding:1rem;background:#f8f9fa;border-radius:8px">
+          <h3 style="color:#00345b;margin-bottom:1rem">Layout Preview</h3>
+          <div style="font-family:monospace;font-size:0.8rem;color:#333">
+            <div style="margin-bottom:0.5rem"><strong>Work Zone Setup:</strong></div>
+            <div id="preview-content">
+              <!-- Preview content will be generated here -->
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- Past Plans -->
+      <section style="background:#fff;padding:1rem;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1)">
+        <h2>Generated Traffic Control Plans</h2>
+        <div id="traffic-plans-list" class="item-list">
+          <div style="padding:.6rem;color:#666">No plans generated yet.</div>
+        </div>
+      </section>
+    </section>
+
+    <!-- Section 5: Reports -->
+    <section id="section-reports" class="section">
+      <h1>5. Reports</h1>
+      <p style="color:#666">(Weekly flows…)</p>
+    </section>
+  </div>
+
+  <!-- Add/Edit Sign Modal -->
+  <div id="add-sign-modal" class="modal-overlay">
+    <div class="modal">
+      <button id="close-add-sign-btn" class="close-modal">&times;</button>
+      <h2 id="modal-title">Add New Sign</h2>
+      <form id="add-sign-form">
+        <div class="form-group">
+          <label for="modal-sign-name">Technical Name</label>
+          <input type="text" id="modal-sign-name" required/>
+        </div>
+        <div class="form-group">
+          <label for="modal-sign-common">Common Name</label>
+          <input type="text" id="modal-sign-common" required/>
+        </div>
+        <div class="form-group">
+          <label for="modal-sign-image">Sign Image</label>
+          <input type="file" id="modal-sign-image" accept="image/*"/>
+        </div>
+        <div class="form-group" style="text-align:center">
+          <label>Preview:</label><br/>
+          <img id="sign-preview" src="" alt="Preview" style="max-width:100px;max-height:100px;border:1px solid #ccc"/>
+        </div>
+        <div style="text-align:right">
+          <button id="cancel-add-sign-btn" class="btn secondary" type="button">Cancel</button>
+          <button id="save-sign-btn" class="btn" type="submit">Save Sign</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Quit Confirmation Modal -->
+  <div id="quit-modal" class="modal-overlay">
+    <div class="modal">
+      <h2 style="color:#dc3545;margin-bottom:1rem">⚡ Quit Application</h2>
+      <p style="margin-bottom:1rem">Are you sure you want to quit the Construction Sign Diaries application?</p>
+      <p style="font-size:0.9rem;color:#666;margin-bottom:1.5rem">
+        This will attempt to shutdown any local server and close the application.
+      </p>
+      <div style="text-align:right">
+        <button id="cancel-quit-btn" class="btn secondary" style="margin-right:0.5rem">Cancel</button>
+        <button id="confirm-quit-btn" class="btn" style="background:#dc3545">Quit Application</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript (Application Logic) -->
+  <script>
+  document.addEventListener('DOMContentLoaded', ()=> {
+    // Check if banner was previously dismissed
+    if (localStorage.getItem('bannerDismissed') === 'true') {
+      document.getElementById('file-banner').classList.add('hidden');
+    }
+
+    // Banner dismiss functionality
+    document.getElementById('dismiss-banner-btn').onclick = function() {
+      const banner = document.getElementById('file-banner');
+      banner.classList.add('hidden');
+      localStorage.setItem('bannerDismissed', 'true');
+    };
+
+    // Utility functions
+    const stationRegex=/^\d{2}\+\d{3}\.\d{2}$/,
+          placeholderImage='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f0f0f0"/><text x="50" y="50" text-anchor="middle" dy=".3em" font-family="Arial" font-size="12" fill="%23999">No Image</text></svg>';
+    
+    function uuid(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{ const r=Math.random()*16|0, v=c==='x'?r:(r&0x3|0x8); return v.toString(16); });}
+
+    // File Management State
+    let currentFileName = null;
+    let currentFileData = null;
+    let hasUnsavedChanges = false;
+    
+    // Data variables - NO localStorage, JSON file primary
+    let signs = [], routes = [], permLogs = [], dailyLogs = [], trafficPlans = [];
+    let dailyEntries = [], permEntries = [];
+
+    // Update UI status
+    function updateFileStatus() {
+      document.getElementById('current-filename').textContent = currentFileName || 'None loaded';
+      document.getElementById('current-signs-count').textContent = signs.length;
+      document.getElementById('last-modified').textContent = hasUnsavedChanges ? 'Modified (unsaved)' : (currentFileName ? 'Saved' : 'Never');
+      
+      // Update file banner status
+      const status = document.getElementById('current-file-status');
+      if (currentFileName) {
+        status.textContent = `Loaded: ${currentFileName} (${signs.length} signs)${hasUnsavedChanges ? ' - UNSAVED CHANGES' : ''}`;
+      } else if (signs.length === 0) {
+        status.textContent = 'Initializing...';
+      } else {
+        status.textContent = 'Working with temporary data - click "Save As..." to create a file';
+      }
+      
+      // Enable/disable buttons
+      document.getElementById('save-signs-file-btn').disabled = !hasUnsavedChanges;
+      document.getElementById('save-as-signs-file-btn').disabled = signs.length === 0;
+      document.getElementById('clear-library-btn').disabled = signs.length === 0;
+    }
+
+    // Mark as changed
+    function markChanged() {
+      hasUnsavedChanges = true;
+      updateFileStatus();
+    }
+
+    // Create new library
+    function createNewLibrary() {
+      if (hasUnsavedChanges && !confirm('You have unsaved changes. Create new library anyway?')) {
+        return;
+      }
+      
+      signs = [];
+      routes = [];
+      permLogs = [];
+      dailyLogs = [];
+      trafficPlans = [];
+      currentFileName = null;
+      currentFileData = null;
+      hasUnsavedChanges = false;
+      
+      renderSigns();
+      updateFileStatus();
+      showNotification('✅ New library created');
+    }
+
+    // Load signs from JSON file
+    function loadSignsFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          
+          // Validate JSON structure
+          if (!data.signs || !Array.isArray(data.signs)) {
+            throw new Error('Invalid file format: missing signs array');
+          }
+          
+          // Load data
+          signs = data.signs || [];
+          routes = data.routes || [];
+          permLogs = data.permanentDiaryLogs || [];
+          dailyLogs = data.dailyDiaryLogs || [];
+          trafficPlans = data.trafficPlans || [];
+          
+          // Ensure all signs have required fields
+          signs.forEach(sign => {
+            if (!sign.id) sign.id = uuid();
+            if (!sign.imageData) sign.imageData = placeholderImage;
+          });
+          
+          currentFileName = file.name;
+          currentFileData = data;
+          hasUnsavedChanges = false;
+          
+          renderSigns();
+          renderRoutes();
+          renderRouteSelect();
+          updateFileStatus();
+          
+          showNotification(`✅ Loaded ${signs.length} signs from ${file.name}`);
+          
+        } catch (error) {
+          console.error('Load error:', error);
+          showNotification(`❌ Failed to load file: ${error.message}`, 'warning');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Save signs file
+    function saveSignsFile(saveAs = false) {
+      const data = {
+        version: '1.0',
+        created: currentFileData?.created || new Date().toISOString(),
+        modified: new Date().toISOString(),
+        signs: signs,
+        routes: routes,
+        permanentDiaryLogs: permLogs,
+        dailyDiaryLogs: dailyLogs,
+        trafficPlans: trafficPlans,
+        metadata: {
+          signsCount: signs.length,
+          routesCount: routes.length,
+          inspectionsCount: permLogs.length + dailyLogs.length
+        }
+      };
+      
+      const dataStr = JSON.stringify(data, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(dataBlob);
+      
+      // Filename logic
+      let filename;
+      if (saveAs || !currentFileName) {
+        const timestamp = new Date().toISOString().slice(0,10);
+        filename = `signs_library_${timestamp}.json`;
+      } else {
+        filename = currentFileName;
+      }
+      
+      link.download = filename;
+      link.click();
+      
+      // Update state
+      currentFileName = filename;
+      currentFileData = data;
+      hasUnsavedChanges = false;
+      updateFileStatus();
+      
+      showNotification(`✅ Saved ${signs.length} signs to ${filename}`);
+    }
+
+    // Auto-initialize: check for existing file first, create default if none found
+    function autoInitialize() {
+      // Try to load default file from same directory first
+      const status = document.getElementById('current-file-status');
+      status.textContent = 'Checking for existing signs library...';
+      
+      tryLoadDefaultFile()
+        .then(loaded => {
+          if (!loaded) {
+            // No existing file found, create default
+            status.textContent = 'No existing library found. Creating default signs library...';
+            setTimeout(() => {
+              createDefaultLibrary();
+            }, 500);
+          }
+        })
+        .catch(error => {
+          console.log('No default file found, creating new one');
+          status.textContent = 'Creating default signs library...';
+          setTimeout(() => {
+            createDefaultLibrary();
+          }, 500);
+        });
+    }
+
+    // Try to load a default JSON file from the same directory
+    async function tryLoadDefaultFile() {
+      const defaultFilenames = [
+        'signs_library.json',
+        'signs.json', 
+        'construction_signs.json',
+        'default_signs.json'
+      ];
+      
+      for (let filename of defaultFilenames) {
+        try {
+          console.log(`Trying to load: ${filename}`);
+          const response = await fetch(filename);
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            // Validate the data structure
+            if (data.signs && Array.isArray(data.signs)) {
+              // Load the found file
+              signs = data.signs || [];
+              routes = data.routes || [];
+              permLogs = data.permanentDiaryLogs || [];
+              dailyLogs = data.dailyDiaryLogs || [];
+              trafficPlans = data.trafficPlans || [];
+              
+              // Ensure all signs have required fields
+              signs.forEach(sign => {
+                if (!sign.id) sign.id = uuid();
+                if (!sign.imageData) sign.imageData = placeholderImage;
+              });
+              
+              currentFileName = filename;
+              currentFileData = data;
+              hasUnsavedChanges = false;
+              
+              renderSigns();
+              renderRoutes();
+              renderRouteSelect();
+              updateFileStatus();
+              
+              showNotification(`✅ Loaded existing library: ${filename} (${signs.length} signs)`);
+              
+              const status = document.getElementById('current-file-status');
+              status.textContent = `Found existing: ${filename} (${signs.length} signs) - Ready to use!`;
+              
+              return true; // Successfully loaded
+            }
+          }
+        } catch (error) {
+          // File doesn't exist or isn't valid JSON, continue to next filename
+          console.log(`Failed to load ${filename}:`, error.message);
+          continue;
+        }
+      }
+      
+      return false; // No valid file found
+    }
+
+    // Create default library with basic signs (only called if no existing file found)
+    function createDefaultLibrary() {
+      const defaultSigns = [
+        {id:uuid(), name:'TC-1', commonName:'Road Work Ahead', imageData:placeholderImage},
+        {id:uuid(), name:'TC-2A', commonName:'Construction 800m', imageData:placeholderImage},
+        {id:uuid(), name:'TC-2B', commonName:'Construction 400m', imageData:placeholderImage},
+        {id:uuid(), name:'TC-4', commonName:'Lane Ends', imageData:placeholderImage},
+        {id:uuid(), name:'TC-21', commonName:'Construction Ahead', imageData:placeholderImage},
+        {id:uuid(), name:'TC-22', commonName:'Flagperson Ahead', imageData:placeholderImage},
+        {id:uuid(), name:'Ra-1', commonName:'Stop', imageData:placeholderImage},
+        {id:uuid(), name:'Ra-2', commonName:'Yield', imageData:placeholderImage}
+      ];
+      
+      signs = defaultSigns;
+      routes = [];
+      permLogs = [];
+      dailyLogs = [];
+      trafficPlans = [];
+      
+      // Create default filename
+      currentFileName = 'signs_library.json';
+      hasUnsavedChanges = false;
+      
+      // Create the initial file data
+      currentFileData = {
+        version: '1.0',
+        created: new Date().toISOString(),
+        modified: new Date().toISOString(),
+        signs: signs,
+        routes: routes,
+        permanentDiaryLogs: permLogs,
+        dailyDiaryLogs: dailyLogs,
+        trafficPlans: trafficPlans,
+        metadata: {
+          signsCount: signs.length,
+          autoCreated: true,
+          description: 'Default signs library with basic traffic control signs'
+        }
+      };
+      
+      // Auto-download the default file
+      const dataStr = JSON.stringify(currentFileData, null, 2);
+      const dataBlob = new Blob([dataStr], {type: 'application/json'});
+      
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(dataBlob);
+      link.download = currentFileName;
+      
+      // Show notification before download
+      showNotification(`📁 Creating default library: ${currentFileName}`, 'success');
+      
+      // Small delay before download for better UX
+      setTimeout(() => {
+        link.click();
+        
+        renderSigns();
+        renderRoutes();
+        renderRouteSelect();
+        updateFileStatus();
+        
+        // Success notification after download
+        setTimeout(() => {
+          showNotification(`✅ Default library created! Place ${currentFileName} in the same folder as this HTML file for automatic loading.`);
+        }, 500);
+        
+        // Update banner to show the auto-created file
+        const status = document.getElementById('current-file-status');
+        status.textContent = `Created: ${currentFileName} (${signs.length} signs) - Place in same folder for auto-loading!`;
+      }, 300);
+    }
+
+    // Load sample signs (expanded version)
+    function loadSampleSigns() {
+      if (hasUnsavedChanges && !confirm('You have unsaved changes. Load extended sample anyway?')) {
+        return;
+      }
+      
+      const sampleSigns = [
+        {id:uuid(), name:'TC-1', commonName:'Road Work Ahead', imageData:placeholderImage},
+        {id:uuid(), name:'TC-2A', commonName:'Construction 800m', imageData:placeholderImage},
+        {id:uuid(), name:'TC-2B', commonName:'Construction 400m', imageData:placeholderImage},
+        {id:uuid(), name:'TC-4', commonName:'Lane Ends', imageData:placeholderImage},
+        {id:uuid(), name:'TC-21', commonName:'Construction Ahead', imageData:placeholderImage},
+        {id:uuid(), name:'TC-22', commonName:'Flagperson Ahead', imageData:placeholderImage},
+        {id:uuid(), name:'Rb-31', commonName:'Speed Limit 60', imageData:placeholderImage},
+        {id:uuid(), name:'Rb-32', commonName:'Speed Limit 50', imageData:placeholderImage},
+        {id:uuid(), name:'Ra-1', commonName:'Stop', imageData:placeholderImage},
+        {id:uuid(), name:'Ra-2', commonName:'Yield', imageData:placeholderImage},
+        {id:uuid(), name:'Wc-2', commonName:'Curve Warning', imageData:placeholderImage},
+        {id:uuid(), name:'Wc-4', commonName:'Intersection Ahead', imageData:placeholderImage}
+      ];
+      
+      signs = sampleSigns;
+      routes = [];
+      permLogs = [];
+      dailyLogs = [];
+      trafficPlans = [];
+      currentFileName = null;
+      currentFileData = null;
+      hasUnsavedChanges = true;
+      
+      renderSigns();
+      renderRoutes();
+      renderRouteSelect();
+      updateFileStatus();
+      showNotification('✅ Extended sample signs library loaded!');
+    }
+
+    // File management event handlers
+    document.getElementById('load-signs-file-btn').onclick = () => {
+      if (hasUnsavedChanges && !confirm('You have unsaved changes. Load different file anyway?')) {
+        return;
+      }
+      document.getElementById('signs-file-input').click();
+    };
+
+    document.getElementById('create-new-library-btn').onclick = createNewLibrary;
+    document.getElementById('save-signs-file-btn').onclick = () => saveSignsFile(false);
+    document.getElementById('save-as-signs-file-btn').onclick = () => saveSignsFile(true);
+    document.getElementById('load-sample-btn').onclick = loadSampleSigns;
+    
+    document.getElementById('clear-library-btn').onclick = () => {
+      if (confirm('Clear all signs? This cannot be undone.')) {
+        signs = [];
+        routes = [];
+        hasUnsavedChanges = true;
+        renderSigns();
+        renderRoutes();
+        renderRouteSelect();
+        updateFileStatus();
+        showNotification('🗑️ Signs library cleared');
+      }
+    };
+
+    // File input handler
+    document.getElementById('signs-file-input').onchange = (e) => {
+      const file = e.target.files[0];
+      if (file && file.type === 'application/json') {
+        loadSignsFile(file);
+        e.target.value = ''; // Reset input
+      } else {
+        showNotification('❌ Please select a valid JSON file', 'warning');
+      }
+    };
+
+    // Notification function
+    function showNotification(message, type = 'success') {
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      setTimeout(() => notification.classList.add('show'), 100);
+      setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => document.body.removeChild(notification), 300);
+      }, 3000);
+    }
+
+    // PDF Download Function
+    function downloadPDF(pdfData, filename, description = '') {
+      try {
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const cleanFilename = `${filename.replace(/[^a-zA-Z0-9_-]/g, '_')}_${timestamp}.pdf`;
+        
+        const byteCharacters = atob(pdfData);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/pdf' });
+
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = cleanFilename;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(link.href);
+        
+        showNotification(`✅ ${description || 'PDF'} downloaded: ${cleanFilename}`);
+        
+      } catch (error) {
+        console.error('Error downloading PDF:', error);
+        showNotification(`❌ Error downloading ${description || 'PDF'}: ${error.message}`, 'warning');
+      }
+    }
+
+    // Navigation
+    function setActive(sec,btn){
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      document.getElementById(sec).classList.add('active');
+      document.querySelectorAll('#sidebar nav button').forEach(b=>b.classList.remove('active'));
+      document.getElementById(btn).classList.add('active');
+    }
+    
+    document.getElementById('nav-library').onclick=()=>setActive('section-library','nav-library');
+    document.getElementById('nav-routes').onclick=()=>setActive('section-routes','nav-routes');
+    document.getElementById('nav-inspections').onclick=()=>setActive('section-inspections','nav-inspections');
+    document.getElementById('nav-traffic-plans').onclick=()=>setActive('section-traffic-plans','nav-traffic-plans');
+    document.getElementById('nav-reports').onclick=()=>setActive('section-reports','nav-reports');
+    document.getElementById('toggle-sidebar').onclick=()=>document.body.classList.toggle('sidebar-collapsed');
+
+    // Quit application functionality
+    document.getElementById('quit-app-btn').onclick = () => {
+      document.getElementById('quit-modal').style.display = 'flex';
+    };
+
+    document.getElementById('cancel-quit-btn').onclick = () => {
+      document.getElementById('quit-modal').style.display = 'none';
+    };
+
+    document.getElementById('quit-modal').onclick = (e) => {
+      if (e.target === document.getElementById('quit-modal')) {
+        document.getElementById('quit-modal').style.display = 'none';
+      }
+    };
+
+    document.getElementById('confirm-quit-btn').onclick = async () => {
+      if (hasUnsavedChanges && !confirm('You have unsaved changes. Quit anyway?')) {
+        return;
+      }
+      
+      document.getElementById('quit-modal').style.display = 'none';
+      
+      const quitBtn = document.getElementById('quit-app-btn');
+      const originalText = quitBtn.innerHTML;
+      quitBtn.innerHTML = '⏳ Shutting down...';
+      quitBtn.disabled = true;
+
+      let serverShutdown = false;
+      
+      const shutdownEndpoints = ['/shutdown', '/quit', '/stop', '/__shutdown__'];
+
+      for (const endpoint of shutdownEndpoints) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'shutdown' })
+          });
+          
+          if (response.ok) {
+            serverShutdown = true;
+            break;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      if (serverShutdown) {
+        alert('✅ Local server shutdown successful!\n\nThe application has been closed. You can now close this browser window.');
+      } else {
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' || 
+                           window.location.hostname === '';
+        
+        if (isLocalhost) {
+          alert('⚠️ Could not automatically shutdown the local server.\n\nTo fully quit the application:\n\n1. Close this browser window\n2. In your terminal/command prompt, press Ctrl+C to stop the server\n\nOr check your server documentation for the proper shutdown command.');
+        } else {
+          alert('✅ Application session ended.\n\nYou can now close this browser window.');
+        }
+      }
+
+      try {
+        window.close();
+      } catch (e) {
+        console.log('Could not automatically close window');
+      }
+      
+      setTimeout(() => {
+        window.location.href = 'about:blank';
+      }, 1000);
+
+      quitBtn.innerHTML = originalText;
+      quitBtn.disabled = false;
+    };
+
+    // Sign Library
+    function renderSigns(){
+      const container=document.getElementById('sign-list'),
+            q=document.getElementById('sign-search').value.toLowerCase();
+      container.innerHTML='';
+      
+      document.getElementById('sign-count').textContent = signs.length;
+      
+      const filtered=signs.filter(s=>(s.name+' '+s.commonName).toLowerCase().includes(q));
+      if(!filtered.length){
+        container.innerHTML='<div style="padding:.6rem;color:#666">No signs found.</div>';
+        return;
+      }
+      filtered.forEach(s=>{
+        const d=document.createElement('div');
+        d.innerHTML=`
+          <div style="display:flex;align-items:center;gap:1rem;flex:1">
+            <img src="${s.imageData}" style="width:40px;height:40px;object-fit:cover;border:1px solid #ccc;border-radius:4px"/>
+            <span style="flex:1;color:#00345b"><strong>${s.name}</strong></span>
+            <span style="flex:1;color:#00345b">${s.commonName}</span>
+          </div>
+          <div>
+            <button class="edit-sign" data-id="${s.id}">✎</button>
+            <button class="delete-sign" data-id="${s.id}">×</button>
+          </div>`;
+        d.querySelector('.edit-sign').onclick=()=>openSignModal(s);
+        d.querySelector('.delete-sign').onclick=()=>{
+          if(confirm('Delete?')){
+            signs=signs.filter(x=>x.id!==s.id); 
+            markChanged();
+            renderSigns(); 
+            renderRoutes(); 
+            renderRouteSelect();
+          }
+        };
+        container.append(d);
+      });
+    }
+    
+    document.getElementById('sign-search').addEventListener('input',renderSigns);
+
+    // Sign Modal
+    const modal=document.getElementById('add-sign-modal'),
+          form=document.getElementById('add-sign-form'),
+          prev=document.getElementById('sign-preview'),
+          imgIn=document.getElementById('modal-sign-image');
+    let editingSign=null;
+    
+    function openSignModal(s){
+      editingSign=s||null;
+      document.getElementById('modal-title').textContent=s?'Edit Sign':'Add New Sign';
+      document.getElementById('modal-sign-name').value=s?s.name:'';
+      document.getElementById('modal-sign-common').value=s?s.commonName:'';
+      prev.src=s?s.imageData:placeholderImage;
+      imgIn.value='';
+      modal.style.display='flex';
+    }
+    
+    document.getElementById('open-add-sign-btn').onclick=()=>openSignModal();
+    document.getElementById('close-add-sign-btn').onclick=()=>modal.style.display='none';
+    document.getElementById('cancel-add-sign-btn').onclick=()=>modal.style.display='none';
+    modal.onclick=e=>{ if(e.target===modal) modal.style.display='none'; };
+
+    imgIn.onchange=e=>{
+      const f=e.target.files[0]; 
+      if(!f){prev.src=placeholderImage;return}
+      const r=new FileReader(); 
+      r.onload=ev=>prev.src=ev.target.result; 
+      r.readAsDataURL(f);
+    };
+    
+    form.onsubmit=e=>{
+      e.preventDefault();
+      const tn=document.getElementById('modal-sign-name').value.trim(),
+            cn=document.getElementById('modal-sign-common').value.trim();
+      if(!tn||!cn){alert('Names required');return;}
+      
+      const f=imgIn.files[0];
+      const processSign = (img) => {
+        if(editingSign){
+          const i=signs.findIndex(x=>x.id===editingSign.id);
+          signs[i].name=tn; signs[i].commonName=cn; signs[i].imageData=img;
+        } else {
+          signs.push({id:uuid(),name:tn,commonName:cn,imageData:img});
+        }
+        markChanged();
+        modal.style.display='none';
+        renderSigns(); 
+        renderRoutes(); 
+        renderRouteSelect();
+      };
+      
+      if(f) {
+        const rdr=new FileReader();
+        rdr.onload=ev=>processSign(ev.target.result);
+        rdr.readAsDataURL(f);
+      } else {
+        processSign(prev.src);
+      }
+    };
+
+    // Routes functionality (stub)
+    function renderRoutes(){
+      const routeList=document.getElementById('route-list');
+      if(!routes.length){
+        routeList.innerHTML='<div style="padding:.6rem;color:#666">No routes created yet.</div>';
+        return;
+      }
+      // Full routes implementation would go here
+      routeList.innerHTML=`<div style="padding:.6rem;color:#666">${routes.length} routes loaded from file.</div>`;
+    }
+    
+    function renderRouteSelect(){
+      const sel=document.getElementById('perm-route-select');
+      sel.innerHTML='<option value="">-- Select --</option>';
+      routes.forEach(r=>{
+        const o=document.createElement('option');
+        o.value=r.id;
+        o.text=r.name;
+        sel.append(o);
+      });
+    }
+
+    // Set today's date as default
+    const dateInput = document.getElementById('project-date');
+    if(dateInput) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    // Initial render and auto-initialization
+    updateFileStatus();
+    renderSigns();
+    renderRoutes();
+    renderRouteSelect();
+    
+    // Auto-create default library if none exists
+    autoInitialize();
+  });
+  </script>
+</body>
+</html>
