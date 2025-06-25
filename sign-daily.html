@@ -11,18 +11,19 @@
    • Copy config from Project Settings > General
    • Replace firebaseConfig object around line 680
 
-2. 📁 YOUR GITHUB PAGES STRUCTURE:
-   Repository: https://github.com/og-nater-tater/mywebiste/tree/main/signs/
-   Live URL: https://og-nater-tater.github.io/mywebiste/signs/
+2. 📁 YOUR EXACT GITHUB PAGES STRUCTURE:
+   Repository: https://github.com/og-nater-tater/mywebiste/tree/52aa664608fa5a456ed7b5fef1e0604dae3aac60/signs
+   App URL: https://og-nater-tater.github.io/mywebiste/sign-daily.html
+   PDF URLs: https://og-nater-tater.github.io/mywebiste/signs/{technical-name}.pdf
    
    Required structure:
-   /signs/
-   ├── index.html (this file)
-   ├── /images/          ← Sign images (TC-1.jpg, TC-2A.jpg, etc.)
-   ├── TC-1.pdf          ← PDFs DIRECTLY in /signs/ folder
-   ├── TC-2A.pdf         ← Named by technical sign name
-   ├── Ra-1.pdf          ← NOT in a subfolder!
-   └── [more PDFs...]    ← Each named exactly like the technical name
+   /mywebiste/
+   ├── sign-daily.html          ← Your app here
+   └── /signs/                  ← PDFs here (EXACT location)
+       ├── TC-1.pdf             ← Direct GitHub Pages URL
+       ├── TC-2A.pdf            ← Named by technical sign name
+       ├── Ra-1.pdf             ← Accessible via absolute URL
+       └── [more PDFs...]       ← Each at: og-nater-tater.github.io/mywebiste/signs/
 
 3. 🎯 FIRST TIME SETUP:
    • Replace Firebase config below
@@ -1022,19 +1023,21 @@
       }
     }
     
-    // Helper to build PDF URL from YOUR specific GitHub Pages structure
+    // Helper to build PDF URL for YOUR exact GitHub location
     function buildPDFUrl(signTechnicalName) {
       const cleanName = signTechnicalName.replace(/[^a-zA-Z0-9\-\_]/g, '');
-      // Your GitHub Pages structure: https://og-nater-tater.github.io/mywebiste/signs/
-      // PDFs are directly in the /signs/ folder, named by technical name
+      
+      // Your EXACT GitHub Pages structure:
+      // Repository: https://github.com/og-nater-tater/mywebiste/tree/52aa664608fa5a456ed7b5fef1e0604dae3aac60/signs
+      // GitHub Pages: https://og-nater-tater.github.io/mywebiste/signs/
       return `https://og-nater-tater.github.io/mywebiste/signs/${cleanName}.pdf`;
     }
     
-    // Helper to check if PDF exists on YOUR GitHub Pages
+    // Helper to check if PDF exists on YOUR exact GitHub Pages location
     async function checkPDFExists(signTechnicalName) {
       try {
         const pdfUrl = buildPDFUrl(signTechnicalName);
-        console.log(`🔍 Checking PDF: ${pdfUrl}`);
+        console.log(`🔍 Checking PDF at exact location: ${pdfUrl}`);
         const response = await fetch(pdfUrl, { method: 'HEAD' });
         return response.ok;
       } catch (error) {
@@ -1047,8 +1050,9 @@
     function openExistingPDF(signTechnicalName) {
       const pdfUrl = buildPDFUrl(signTechnicalName);
       console.log(`📄 Opening PDF: ${pdfUrl}`);
+      console.log(`📁 Full URL: https://og-nater-tater.github.io/mywebiste/signs/${signTechnicalName}.pdf`);
       window.open(pdfUrl, '_blank');
-      showNotification(`📄 Opening ${signTechnicalName}.pdf from GitHub`);
+      showNotification(`📄 Opening ${signTechnicalName}.pdf from /signs/ folder`);
     }
 
     // Navigation
@@ -1213,7 +1217,7 @@
       if (pdfExists) {
         openExistingPDF(signTechnicalName);
       } else {
-        const expectedUrl = buildPDFUrl(signTechnicalName);
+        const expectedUrl = `https://og-nater-tater.github.io/mywebiste/signs/${signTechnicalName}.pdf`;
         const message = `PDF not found for ${signTechnicalName}
 
 Expected location: ${expectedUrl}
@@ -1221,12 +1225,12 @@ Expected location: ${expectedUrl}
 To add this PDF to YOUR GitHub repository:
 1. Create/generate the PDF for this sign
 2. Name it exactly: ${signTechnicalName}.pdf
-3. Upload it directly to: /signs/ folder (NOT in a subfolder)
+3. Upload it to: /signs/ folder in your repo
 4. Your repo structure should be:
-   /signs/
-   ├── index.html
-   ├── ${signTechnicalName}.pdf ← HERE
-   └── /images/
+   /mywebiste/
+   ├── sign-daily.html     ← Your app
+   └── /signs/
+       └── ${signTechnicalName}.pdf ← HERE
 
 5. Commit changes and wait 2-3 minutes for GitHub Pages to update
 
@@ -1776,65 +1780,59 @@ Generated: ${new Date().toLocaleString()}
       return imageUrl;
     };
     
-    // Helper to test PDF loading from YOUR specific GitHub Pages structure
+    // Helper to test PDF loading from YOUR exact GitHub location
     window.testPDFLoading = async function(signName = 'TC-1') {
       const pdfUrl = buildPDFUrl(signName);
-      console.log(`📄 Testing PDF: ${pdfUrl}`);
-      console.log(`📁 Expected location: /signs/${signName}.pdf in your repo`);
+      console.log(`📄 Testing PDF at EXACT location: ${pdfUrl}`);
+      console.log(`📁 Repository: https://github.com/og-nater-tater/mywebiste/tree/52aa664608fa5a456ed7b5fef1e0604dae3aac60/signs`);
+      console.log(`📁 Expected file: ${signName}.pdf`);
       
       const exists = await checkPDFExists(signName);
       if (exists) {
-        console.log(`✅ PDF exists and accessible: ${pdfUrl}`);
+        console.log(`✅ PDF found and accessible: ${pdfUrl}`);
       } else {
         console.log(`❌ PDF not found: ${pdfUrl}`);
-        console.log(`💡 Upload ${signName}.pdf directly to your /signs/ folder`);
+        console.log(`💡 Make sure ${signName}.pdf exists in your /signs/ folder`);
+        console.log(`💡 GitHub repo: https://github.com/og-nater-tater/mywebiste/blob/main/signs/${signName}.pdf`);
       }
       
       return { url: pdfUrl, exists };
     };
     
-    // Helper to test YOUR complete GitHub Pages structure
+    // Helper to test YOUR exact GitHub Pages structure
     window.testGitHubPagesStructure = async function() {
-      console.log('🔧 Testing YOUR GitHub Pages structure...');
-      console.log('📍 Base URL: https://og-nater-tater.github.io/mywebiste/signs/');
-      console.log('📁 Repository: https://github.com/og-nater-tater/mywebiste/tree/main/signs/');
+      console.log('🔧 Testing YOUR EXACT GitHub Pages structure...');
+      console.log('📍 Repository: https://github.com/og-nater-tater/mywebiste/tree/52aa664608fa5a456ed7b5fef1e0604dae3aac60/signs');
+      console.log('📍 GitHub Pages PDFs: https://og-nater-tater.github.io/mywebiste/signs/');
+      console.log('📍 App URL: https://og-nater-tater.github.io/mywebiste/sign-daily.html');
       
       const testSigns = ['TC-1', 'TC-2A', 'Ra-1'];
       
       for (const signName of testSigns) {
         console.log(`\n--- Testing ${signName} ---`);
         
-        // Test image
-        const imageUrl = buildImageUrl(signName);
-        const imgTest = new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve(true);
-          img.onerror = () => resolve(false);
-          img.src = imageUrl;
-        });
-        
-        // Test PDF
+        // Test PDF at exact location
         const pdfExists = await checkPDFExists(signName);
-        const imageExists = await imgTest;
+        const pdfUrl = buildPDFUrl(signName);
         
-        console.log(`📷 Image (${imageUrl}): ${imageExists ? '✅' : '❌'}`);
-        console.log(`📄 PDF (${buildPDFUrl(signName)}): ${pdfExists ? '✅' : '❌'}`);
+        console.log(`📄 PDF (${pdfUrl}): ${pdfExists ? '✅ FOUND' : '❌ NOT FOUND'}`);
         
         if (!pdfExists) {
-          console.log(`   💡 Upload ${signName}.pdf to /signs/ folder (NOT in subfolder)`);
+          console.log(`   💡 Upload ${signName}.pdf to: https://github.com/og-nater-tater/mywebiste/tree/main/signs/`);
+          console.log(`   📁 Should be accessible at: ${pdfUrl}`);
         }
       }
       
-      console.log('\n🎯 YOUR Structure Should Be:');
+      console.log('\n🎯 YOUR EXACT Structure:');
+      console.log('Repository: og-nater-tater/mywebiste');
       console.log('/signs/');
-      console.log('├── index.html');
-      console.log('├── TC-1.pdf         ← PDFs HERE (by technical name)');
-      console.log('├── TC-2A.pdf        ← PDFs HERE');
-      console.log('├── Ra-1.pdf         ← PDFs HERE');
-      console.log('└── /images/         ← Images in subfolder');
-      console.log('    ├── TC-1.jpg');
-      console.log('    ├── TC-2A.jpg');
-      console.log('    └── Ra-1.jpg');
+      console.log('├── TC-1.pdf     ← PDFs HERE');
+      console.log('├── TC-2A.pdf    ← PDFs HERE');  
+      console.log('└── Ra-1.pdf     ← PDFs HERE');
+      console.log('\nGitHub Pages URLs:');
+      console.log('https://og-nater-tater.github.io/mywebiste/signs/TC-1.pdf');
+      console.log('https://og-nater-tater.github.io/mywebiste/signs/TC-2A.pdf');
+      console.log('https://og-nater-tater.github.io/mywebiste/signs/Ra-1.pdf');
     };
     
     // Show detailed setup instructions
