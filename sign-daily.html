@@ -1,4 +1,40 @@
 <!DOCTYPE html>
+<!--
+🚧 CONSTRUCTION SIGN DIARIES - FIREBASE EDITION
+
+📋 SETUP CHECKLIST:
+
+1. 🔥 FIREBASE SETUP:
+   • Create project: https://console.firebase.google.com
+   • Enable Firestore Database (test mode)
+   • Enable Storage
+   • Copy config from Project Settings > General
+   • Replace firebaseConfig object around line 680
+
+2. 📁 YOUR GITHUB PAGES STRUCTURE:
+   Repository: https://github.com/og-nater-tater/mywebiste/tree/main/signs/
+   Live URL: https://og-nater-tater.github.io/mywebiste/signs/
+   
+   Required structure:
+   /signs/
+   ├── index.html (this file)
+   ├── /images/          ← Sign images (TC-1.jpg, TC-2A.jpg, etc.)
+   ├── TC-1.pdf          ← PDFs DIRECTLY in /signs/ folder
+   ├── TC-2A.pdf         ← Named by technical sign name
+   ├── Ra-1.pdf          ← NOT in a subfolder!
+   └── [more PDFs...]    ← Each named exactly like the technical name
+
+3. 🎯 FIRST TIME SETUP:
+   • Replace Firebase config below
+   • Open the app in browser
+   • Click "Create Sample Signs" to populate database
+   • Add your actual sign images to /images/ folder
+
+4. 🔐 SECURITY (LATER):
+   • Update Firestore rules for production
+   • Set up authentication if needed
+
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -58,19 +94,32 @@
     }
     .form-group input[type="text"],
     .form-group input[type="date"],
-    .form-group select {
+    .form-group select,
+    #sign-search,
+    #daily-sign-search {
       width:100%; padding:.5rem .6rem; border:1px solid #ccc;
       border-radius:5px; background:#fff; transition:border-color .2s
     }
     .form-group input:focus,
-    .form-group select:focus { outline:none; border-color:#005a9c }
+    .form-group select:focus,
+    #sign-search:focus,
+    #daily-sign-search:focus { 
+      outline:none; border-color:#005a9c 
+    }
+    
+    #sign-search:disabled,
+    #daily-sign-search:disabled {
+      background:#f5f5f5; color:#999; cursor:not-allowed;
+    }
     .btn {
       background:#005a9c; color:#fff; border:none;
       padding:.55rem 1.1rem; border-radius:5px; cursor:pointer;
-      margin-bottom:.5rem; transition:.2s;
+      margin-bottom:.5rem; transition:.2s; font-weight:500;
     }
-    .btn:hover { background:#00417c }
-    .btn:disabled { background:#999; cursor:not-allowed }
+    .btn:hover:not(:disabled) { background:#00417c }
+    .btn:disabled { 
+      background:#999; cursor:not-allowed; color:#ddd;
+    }
     .btn.secondary {
       background:#6c757d; color:#fff;
     }
@@ -147,16 +196,22 @@
     #daily-sign-suggestions {
       position:absolute; top:100%; left:0; right:0; background:#fff;
       border:1px solid #ccc; border-top:none; border-radius:0 0 5px 5px;
-      max-height:180px; overflow-y:auto; z-index:10
+      max-height:240px; overflow-y:auto; z-index:10; box-shadow:0 2px 8px rgba(0,0,0,0.1);
     }
     .suggestion-item {
       padding:.5rem; display:flex; align-items:center; cursor:pointer;
-      transition:.2s
+      transition:.2s; border-bottom:1px solid #f0f0f0;
     }
-    .suggestion-item:hover { background:#eef1f5 }
+    .suggestion-item:hover,
+    .suggestion-item.active { 
+      background:#e3f2fd; 
+    }
+    .suggestion-item:last-child {
+      border-bottom:none;
+    }
     .suggestion-item img {
       width:30px; height:30px; object-fit:cover; margin-right:.5rem;
-      border:1px solid #ddd; border-radius:4px
+      border:1px solid #ddd; border-radius:4px; flex-shrink:0;
     }
 
     /* Notification styles */
@@ -246,9 +301,76 @@
       gap: 0.5rem;
       flex-wrap: wrap;
     }
+    
+    /* Sign count badge */
+    .sign-count {
+      background: #005a9c;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+    
+    // 🔥 FIREBASE CONFIGURATION - YOUR PROJECT DETAILS 🔥
+    const firebaseConfig = {
+      apiKey: "AIzaSyDTvH8VeU30Py44eiZzOFZyisNB59gDMW4",
+      authDomain: "constructionsigndiaries.firebaseapp.com",
+      projectId: "constructionsigndiaries",
+      storageBucket: "constructionsigndiaries.firebasestorage.app",
+      messagingSenderId: "101801431075",
+      appId: "1:101801431075:web:c0f3b0ccaf1134a75f6196",
+      measurementId: "G-PC5MTYLEV0"
+    };
+    
+    // Initialize Firebase
+    try {
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const storage = getStorage(app);
+      
+      // Make Firebase available globally
+      window.firebaseDb = db;
+      window.firebaseStorage = storage;
+      window.firebaseUtils = {
+        collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy,
+        ref, uploadBytes, getDownloadURL
+      };
+      
+      console.log('✅ Firebase initialized successfully');
+    } catch (error) {
+      console.error('❌ Firebase initialization failed:', error);
+      
+      // Show detailed setup instructions on config error
+      setTimeout(() => {
+        const statusElement = document.getElementById('current-file-status');
+        if (statusElement) {
+          statusElement.innerHTML = `<span style="color:#d00">⚠️ Firebase not configured</span>`;
+        }
+        
+        // Show setup banner
+        const banner = document.getElementById('file-banner');
+        if (banner) {
+          banner.style.background = '#fff3cd';
+          banner.style.borderColor = '#ffeaa7';
+          banner.innerHTML = `
+            <strong>🔧 Setup Required:</strong> 
+            Firebase configuration not found. 
+            <a href="#setup-instructions" onclick="showSetupInstructions()" style="color:#856404;text-decoration:underline">Click here for setup instructions</a>
+          `;
+        }
+      }, 1000);
+    }
+  </script>
 </head>
 <body>
 
@@ -269,8 +391,8 @@
     <!-- File Management Banner -->
     <div id="file-banner" class="info-banner">
       <button class="close-banner" id="dismiss-banner-btn">&times;</button>
-      <strong>📁 Smart File Loading:</strong> The app automatically looks for JSON files in its directory (signs_library.json, signs.json, etc.) and loads them. If none found, it creates a default library.
-      <span id="current-file-status">Checking directory...</span>
+      <strong>☁️ Cloud-Powered:</strong> This app uses Firebase for real-time data sync. Your signs, routes, and inspection reports are stored in the cloud and automatically sync across devices.
+      <span id="current-file-status">Connecting to Firebase...</span>
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
@@ -284,46 +406,19 @@
     <section id="section-library" class="section active">
       <h1>1. Sign Library</h1>
       
-      <!-- File Management Section -->
-      <div class="import-export-section">
-        <h3>📁 Signs Library File Management</h3>
-        
-        <div style="margin-bottom: 1rem; padding: 1rem; background: #e3f2fd; border-radius: 6px; font-size: 0.9rem; border-left: 4px solid #2196f3;">
-          <strong>💡 Auto-Loading:</strong> Place <code>signs_library.json</code> in the same folder as this HTML file for automatic loading on startup. 
-          The app checks for: <code>signs_library.json</code>, <code>signs.json</code>, <code>construction_signs.json</code>, or <code>default_signs.json</code>.
-        </div>
-        
-        <div class="button-group">
-          <button id="load-signs-file-btn" class="btn success">📂 Load Different File</button>
-          <button id="create-new-library-btn" class="btn success">🆕 Create New Library</button>
-          <button id="save-signs-file-btn" class="btn" disabled>💾 Save Changes</button>
-          <button id="save-as-signs-file-btn" class="btn secondary" disabled>💾 Save As...</button>
-        </div>
-        
-        <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 6px; font-size: 0.9rem;">
-          <strong>Current File:</strong> <span id="current-filename">None loaded</span><br>
-          <strong>Signs Count:</strong> <span id="current-signs-count">0</span><br>
-          <strong>Last Modified:</strong> <span id="last-modified">Never</span>
-        </div>
-        
-        <!-- File Input (Hidden) -->
-        <input type="file" id="signs-file-input" class="file-input" accept=".json">
-        
-        <!-- Quick Actions -->
-        <div style="margin-top: 1rem;">
-          <h4 style="margin-bottom: 0.5rem; color: #00345b;">Quick Actions:</h4>
-          <div class="button-group">
-            <button id="load-sample-btn" class="btn secondary">🎯 Load Extended Sample</button>
-            <button id="clear-library-btn" class="btn" style="background:#dc3545" disabled>🗑️ Clear Library</button>
-          </div>
-        </div>
+      <!-- Status Banner -->
+      <div id="signs-status-banner" class="info-banner">
+        <button class="close-banner" id="dismiss-signs-banner-btn">&times;</button>
+        <strong>🔄 Real-Time Sync:</strong> <span id="current-file-status">Connecting to Firebase...</span>
       </div>
 
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-        <input type="text" id="sign-search" placeholder="Search by technical or common name…"/>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;gap:1rem">
+        <input type="text" id="sign-search" placeholder="Loading signs..." style="flex:1" disabled/>
         <button id="open-add-sign-btn" class="btn">Add New Sign</button>
+        <div class="sign-count" style="background:#005a9c;color:#fff;padding:0.5rem 1rem;border-radius:20px;font-weight:500">
+          📋 <span id="sign-count">0</span> signs
+        </div>
       </div>
-      <h2>Existing Signs (<span id="sign-count">0</span>)</h2>
       <div id="sign-list" class="item-list"></div>
     </section>
 
@@ -334,16 +429,26 @@
       <form id="route-form" style="background:#fff;padding:1rem;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.1)">
         <div class="form-group">
           <label for="route-name">Route Name</label>
-          <input type="text" id="route-name" required placeholder="Job #1234"/>
+          <input type="text" id="route-name" name="route-name" required placeholder="Job #1234 - Highway Work"/>
         </div>
-        <table>
+        
+        <div style="margin-bottom:1rem">
+          <h3 style="color:#00345b;margin-bottom:0.5rem">Route Entries</h3>
+          <p style="color:#666;font-size:0.9rem;margin-bottom:1rem">Add the permanent signs for this route in order from start to finish.</p>
+        </div>
+        
+        <table style="margin-bottom:1rem">
           <thead><tr>
-            <th>Sign</th><th>Station</th><th>Highway</th><th>End</th><th>Remove</th>
+            <th>Sign</th><th>Station</th><th>Highway</th><th>End Station</th><th>Remove</th>
           </tr></thead>
           <tbody id="route-entries-body"></tbody>
         </table>
-        <button id="add-route-entry-btn" class="btn" type="button">+ Add Entry</button>
-        <button type="submit" class="btn">Save Route</button>
+        
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <button id="add-route-entry-btn" class="btn secondary" type="button">+ Add Sign Entry</button>
+          <button type="submit" class="btn">Save Route</button>
+          <button type="button" id="cancel-route-btn" class="btn" style="background:#6c757d" onclick="clearRouteForm()">Cancel</button>
+        </div>
       </form>
       <hr style="margin:2rem 0;border-color:#ddd"/>
       <h2>Existing Routes</h2>
@@ -380,7 +485,7 @@
           <div style="display:flex;gap:1rem">
             <div class="form-group" style="flex:2;position:relative">
               <label for="daily-sign-search">Sign Type</label>
-              <input type="text" id="daily-sign-search" placeholder="Search sign…" autocomplete="off"/>
+              <input type="text" id="daily-sign-search" placeholder="Searching for JSON files..." autocomplete="off" disabled/>
               <input type="hidden" id="daily-sign-id"/>
               <div id="daily-sign-suggestions" style="display:none"></div>
             </div>
@@ -394,7 +499,7 @@
             </div>
           </div>
           <div style="display:flex;gap:0.5rem">
-            <button id="add-daily-entry-btn" class="btn" type="button">+ Add Entry</button>
+            <button id="add-daily-entry-btn" class="btn" type="button" disabled>+ Select Sign First</button>
             <button id="reload-last-diary-btn" class="btn secondary" type="button">📋 Reload Last Diary</button>
           </div>
         </form>
@@ -537,15 +642,16 @@
       <form id="add-sign-form">
         <div class="form-group">
           <label for="modal-sign-name">Technical Name</label>
-          <input type="text" id="modal-sign-name" required/>
+          <input type="text" id="modal-sign-name" required placeholder="e.g., TC-21"/>
         </div>
         <div class="form-group">
           <label for="modal-sign-common">Common Name</label>
-          <input type="text" id="modal-sign-common" required/>
+          <input type="text" id="modal-sign-common" required placeholder="e.g., Construction Ahead"/>
         </div>
         <div class="form-group">
-          <label for="modal-sign-image">Sign Image</label>
+          <label for="modal-sign-image">Sign Image (Optional)</label>
           <input type="file" id="modal-sign-image" accept="image/*"/>
+          <small style="color:#666;font-size:0.8rem">Leave empty to use image from ./images/ folder</small>
         </div>
         <div class="form-group" style="text-align:center">
           <label>Preview:</label><br/>
@@ -553,7 +659,7 @@
         </div>
         <div style="text-align:right">
           <button id="cancel-add-sign-btn" class="btn secondary" type="button">Cancel</button>
-          <button id="save-sign-btn" class="btn" type="submit">Save Sign</button>
+          <button id="save-sign-btn" class="btn" type="submit">Save to Cloud</button>
         </div>
       </form>
     </div>
@@ -577,9 +683,27 @@
   <!-- JavaScript (Application Logic) -->
   <script>
   document.addEventListener('DOMContentLoaded', ()=> {
+    // Wait for Firebase to be available
+    setTimeout(initializeApp, 100);
+    
+    function initializeApp() {
+      if (!window.firebaseDb) {
+        console.log('Waiting for Firebase...');
+        setTimeout(initializeApp, 100);
+        return;
+      }
+      
+      console.log('Firebase initialized, starting app...');
+      startApplication();
+    }
+    
+    function startApplication() {
     // Check if banner was previously dismissed
     if (localStorage.getItem('bannerDismissed') === 'true') {
       document.getElementById('file-banner').classList.add('hidden');
+    }
+    if (localStorage.getItem('signsBannerDismissed') === 'true') {
+      document.getElementById('signs-status-banner').classList.add('hidden');
     }
 
     // Banner dismiss functionality
@@ -588,6 +712,12 @@
       banner.classList.add('hidden');
       localStorage.setItem('bannerDismissed', 'true');
     };
+    
+    document.getElementById('dismiss-signs-banner-btn').onclick = function() {
+      const banner = document.getElementById('signs-status-banner');
+      banner.classList.add('hidden');
+      localStorage.setItem('signsBannerDismissed', 'true');
+    };
 
     // Utility functions
     const stationRegex=/^\d{2}\+\d{3}\.\d{2}$/,
@@ -595,380 +725,227 @@
     
     function uuid(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{ const r=Math.random()*16|0, v=c==='x'?r:(r&0x3|0x8); return v.toString(16); });}
 
-    // File Management State
-    let currentFileName = null;
-    let currentFileData = null;
-    let hasUnsavedChanges = false;
-    
-    // Data variables - NO localStorage, JSON file primary
-    let signs = [], routes = [], permLogs = [], dailyLogs = [], trafficPlans = [];
+    // Data variables - simplified for signs-only loading
+    let signs = [];
+    let routes = [], permLogs = [], dailyLogs = [], trafficPlans = [];
     let dailyEntries = [], permEntries = [];
+    
+    // Daily search state
+    let dailySearchSuggestions = [];
+    let selectedSuggestionIndex = -1;
 
-    // Update UI status
-    function updateFileStatus() {
-      document.getElementById('current-filename').textContent = currentFileName || 'None loaded';
-      document.getElementById('current-signs-count').textContent = signs.length;
-      document.getElementById('last-modified').textContent = hasUnsavedChanges ? 'Modified (unsaved)' : (currentFileName ? 'Saved' : 'Never');
+    // Firebase-backed signs loading with real-time updates
+    function setupFirebaseSignsListener() {
+      const statusElement = document.getElementById('current-file-status');
       
-      // Update file banner status
-      const status = document.getElementById('current-file-status');
-      if (currentFileName) {
-        status.textContent = `Loaded: ${currentFileName} (${signs.length} signs)${hasUnsavedChanges ? ' - UNSAVED CHANGES' : ''}`;
-      } else if (signs.length === 0) {
-        status.textContent = 'Initializing...';
-      } else {
-        status.textContent = 'Working with temporary data - click "Save As..." to create a file';
-      }
-      
-      // Enable/disable buttons
-      document.getElementById('save-signs-file-btn').disabled = !hasUnsavedChanges;
-      document.getElementById('save-as-signs-file-btn').disabled = signs.length === 0;
-      document.getElementById('clear-library-btn').disabled = signs.length === 0;
-    }
-
-    // Mark as changed
-    function markChanged() {
-      hasUnsavedChanges = true;
-      updateFileStatus();
-    }
-
-    // Create new library
-    function createNewLibrary() {
-      if (hasUnsavedChanges && !confirm('You have unsaved changes. Create new library anyway?')) {
-        return;
-      }
-      
-      signs = [];
-      routes = [];
-      permLogs = [];
-      dailyLogs = [];
-      trafficPlans = [];
-      currentFileName = null;
-      currentFileData = null;
-      hasUnsavedChanges = false;
-      
-      renderSigns();
-      updateFileStatus();
-      showNotification('✅ New library created');
-    }
-
-    // Load signs from JSON file
-    function loadSignsFile(file) {
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
+      try {
+        console.log('🔍 Setting up Firebase signs listener...');
+        statusElement.textContent = 'Connecting to Firebase...';
+        
+        const { collection, onSnapshot, query, orderBy } = window.firebaseUtils;
+        const signsCollection = collection(window.firebaseDb, 'signs');
+        const signsQuery = query(signsCollection, orderBy('name'));
+        
+        // Set up real-time listener
+        const unsubscribe = onSnapshot(signsQuery, (snapshot) => {
+          signs = [];
           
-          // Validate JSON structure
-          if (!data.signs || !Array.isArray(data.signs)) {
-            throw new Error('Invalid file format: missing signs array');
-          }
-          
-          // Load data
-          signs = data.signs || [];
-          routes = data.routes || [];
-          permLogs = data.permanentDiaryLogs || [];
-          dailyLogs = data.dailyDiaryLogs || [];
-          trafficPlans = data.trafficPlans || [];
-          
-          // Ensure all signs have required fields
-          signs.forEach(sign => {
-            if (!sign.id) sign.id = uuid();
-            if (!sign.imageData) sign.imageData = placeholderImage;
+          snapshot.forEach((doc) => {
+            const signData = doc.data();
+            signs.push({
+              id: doc.id,
+              name: signData.name,
+              commonName: signData.commonName,
+              imageData: signData.imageData || buildImageUrl(signData.name)
+            });
           });
           
-          currentFileName = file.name;
-          currentFileData = data;
-          hasUnsavedChanges = false;
+          console.log(`✅ Loaded ${signs.length} signs from Firebase`);
           
+          // If no signs exist, offer to create sample data
+          if (signs.length === 0) {
+            statusElement.innerHTML = `
+              <span style="color:#e67e22">No signs in database. </span>
+              <button onclick="createSampleSignsInFirebase()" style="background:#28a745;color:white;border:none;padding:0.25rem 0.5rem;border-radius:3px;cursor:pointer;margin:0 0.25rem">🌱 Create Sample Signs</button>
+            `;
+          } else {
+            statusElement.textContent = `Connected to Firebase - ${signs.length} signs loaded`;
+          }
+          
+          updateSearchInput();
           renderSigns();
-          renderRoutes();
           renderRouteSelect();
-          updateFileStatus();
           
-          showNotification(`✅ Loaded ${signs.length} signs from ${file.name}`);
-          
-        } catch (error) {
-          console.error('Load error:', error);
-          showNotification(`❌ Failed to load file: ${error.message}`, 'warning');
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    // Save signs file
-    function saveSignsFile(saveAs = false) {
-      const data = {
-        version: '1.0',
-        created: currentFileData?.created || new Date().toISOString(),
-        modified: new Date().toISOString(),
-        signs: signs,
-        routes: routes,
-        permanentDiaryLogs: permLogs,
-        dailyDiaryLogs: dailyLogs,
-        trafficPlans: trafficPlans,
-        metadata: {
-          signsCount: signs.length,
-          routesCount: routes.length,
-          inspectionsCount: permLogs.length + dailyLogs.length
-        }
-      };
-      
-      const dataStr = JSON.stringify(data, null, 2);
-      const dataBlob = new Blob([dataStr], {type: 'application/json'});
-      
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(dataBlob);
-      
-      // Filename logic
-      let filename;
-      if (saveAs || !currentFileName) {
-        const timestamp = new Date().toISOString().slice(0,10);
-        filename = `signs_library_${timestamp}.json`;
-      } else {
-        filename = currentFileName;
-      }
-      
-      link.download = filename;
-      link.click();
-      
-      // Update state
-      currentFileName = filename;
-      currentFileData = data;
-      hasUnsavedChanges = false;
-      updateFileStatus();
-      
-      showNotification(`✅ Saved ${signs.length} signs to ${filename}`);
-    }
-
-    // Auto-initialize: check for existing file first, create default if none found
-    function autoInitialize() {
-      // Try to load default file from same directory first
-      const status = document.getElementById('current-file-status');
-      status.textContent = 'Checking for existing signs library...';
-      
-      tryLoadDefaultFile()
-        .then(loaded => {
-          if (!loaded) {
-            // No existing file found, create default
-            status.textContent = 'No existing library found. Creating default signs library...';
-            setTimeout(() => {
-              createDefaultLibrary();
-            }, 500);
-          }
-        })
-        .catch(error => {
-          console.log('No default file found, creating new one');
-          status.textContent = 'Creating default signs library...';
+          // Initialize daily search with loaded signs
           setTimeout(() => {
-            createDefaultLibrary();
-          }, 500);
-        });
-    }
-
-    // Try to load a default JSON file from the same directory
-    async function tryLoadDefaultFile() {
-      const defaultFilenames = [
-        'signs_library.json',
-        'signs.json', 
-        'construction_signs.json',
-        'default_signs.json'
-      ];
-      
-      for (let filename of defaultFilenames) {
-        try {
-          console.log(`Trying to load: ${filename}`);
-          const response = await fetch(filename);
+            initializeDailySearch();
+          }, 100);
+        }, (error) => {
+          console.error('❌ Firebase listener error:', error);
+          statusElement.textContent = `Firebase connection error: ${error.message}`;
           
-          if (response.ok) {
-            const data = await response.json();
-            
-            // Validate the data structure
-            if (data.signs && Array.isArray(data.signs)) {
-              // Load the found file
-              signs = data.signs || [];
-              routes = data.routes || [];
-              permLogs = data.permanentDiaryLogs || [];
-              dailyLogs = data.dailyDiaryLogs || [];
-              trafficPlans = data.trafficPlans || [];
-              
-              // Ensure all signs have required fields
-              signs.forEach(sign => {
-                if (!sign.id) sign.id = uuid();
-                if (!sign.imageData) sign.imageData = placeholderImage;
-              });
-              
-              currentFileName = filename;
-              currentFileData = data;
-              hasUnsavedChanges = false;
-              
-              renderSigns();
-              renderRoutes();
-              renderRouteSelect();
-              updateFileStatus();
-              
-              showNotification(`✅ Loaded existing library: ${filename} (${signs.length} signs)`);
-              
-              const status = document.getElementById('current-file-status');
-              status.textContent = `Found existing: ${filename} (${signs.length} signs) - Ready to use!`;
-              
-              return true; // Successfully loaded
-            }
-          }
-        } catch (error) {
-          // File doesn't exist or isn't valid JSON, continue to next filename
-          console.log(`Failed to load ${filename}:`, error.message);
-          continue;
-        }
-      }
-      
-      return false; // No valid file found
-    }
-
-    // Create default library with basic signs (only called if no existing file found)
-    function createDefaultLibrary() {
-      const defaultSigns = [
-        {id:uuid(), name:'TC-1', commonName:'Road Work Ahead', imageData:placeholderImage},
-        {id:uuid(), name:'TC-2A', commonName:'Construction 800m', imageData:placeholderImage},
-        {id:uuid(), name:'TC-2B', commonName:'Construction 400m', imageData:placeholderImage},
-        {id:uuid(), name:'TC-4', commonName:'Lane Ends', imageData:placeholderImage},
-        {id:uuid(), name:'TC-21', commonName:'Construction Ahead', imageData:placeholderImage},
-        {id:uuid(), name:'TC-22', commonName:'Flagperson Ahead', imageData:placeholderImage},
-        {id:uuid(), name:'Ra-1', commonName:'Stop', imageData:placeholderImage},
-        {id:uuid(), name:'Ra-2', commonName:'Yield', imageData:placeholderImage}
-      ];
-      
-      signs = defaultSigns;
-      routes = [];
-      permLogs = [];
-      dailyLogs = [];
-      trafficPlans = [];
-      
-      // Create default filename
-      currentFileName = 'signs_library.json';
-      hasUnsavedChanges = false;
-      
-      // Create the initial file data
-      currentFileData = {
-        version: '1.0',
-        created: new Date().toISOString(),
-        modified: new Date().toISOString(),
-        signs: signs,
-        routes: routes,
-        permanentDiaryLogs: permLogs,
-        dailyDiaryLogs: dailyLogs,
-        trafficPlans: trafficPlans,
-        metadata: {
-          signsCount: signs.length,
-          autoCreated: true,
-          description: 'Default signs library with basic traffic control signs'
-        }
-      };
-      
-      // Auto-download the default file
-      const dataStr = JSON.stringify(currentFileData, null, 2);
-      const dataBlob = new Blob([dataStr], {type: 'application/json'});
-      
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(dataBlob);
-      link.download = currentFileName;
-      
-      // Show notification before download
-      showNotification(`📁 Creating default library: ${currentFileName}`, 'success');
-      
-      // Small delay before download for better UX
-      setTimeout(() => {
-        link.click();
+          // Show detailed error help
+          document.getElementById('sign-list').innerHTML = `
+            <div style="padding:1rem;color:#d00;text-align:center;background:#ffebee;border-radius:8px">
+              <strong>⚠️ Firebase Connection Error</strong><br>
+              <code>${error.message}</code><br><br>
+              <strong>Common fixes:</strong><br>
+              • Check your Firebase config in the code<br>
+              • Ensure Firestore is enabled in Firebase Console<br>
+              • Check browser console for more details<br>
+              <button onclick="window.location.reload()" style="margin-top:0.5rem;padding:0.5rem;background:#005a9c;color:white;border:none;border-radius:3px;cursor:pointer">🔄 Retry Connection</button>
+            </div>
+          `;
+          
+          // Disable search
+          const searchInput = document.getElementById('sign-search');
+          searchInput.placeholder = 'Firebase connection failed';
+          searchInput.disabled = true;
+        });
         
-        renderSigns();
-        renderRoutes();
-        renderRouteSelect();
-        updateFileStatus();
+        // Store unsubscribe function for cleanup if needed
+        window.firebaseUnsubscribe = unsubscribe;
         
-        // Success notification after download
-        setTimeout(() => {
-          showNotification(`✅ Default library created! Place ${currentFileName} in the same folder as this HTML file for automatic loading.`);
-        }, 500);
-        
-        // Update banner to show the auto-created file
-        const status = document.getElementById('current-file-status');
-        status.textContent = `Created: ${currentFileName} (${signs.length} signs) - Place in same folder for auto-loading!`;
-      }, 300);
-    }
-
-    // Load sample signs (expanded version)
-    function loadSampleSigns() {
-      if (hasUnsavedChanges && !confirm('You have unsaved changes. Load extended sample anyway?')) {
-        return;
+      } catch (error) {
+        console.error('❌ Failed to setup Firebase listener:', error);
+        statusElement.innerHTML = `
+          <span style="color:#d00">Firebase setup error: ${error.message}</span><br>
+          <small>Check that your Firebase config is correct</small>
+        `;
       }
-      
-      const sampleSigns = [
-        {id:uuid(), name:'TC-1', commonName:'Road Work Ahead', imageData:placeholderImage},
-        {id:uuid(), name:'TC-2A', commonName:'Construction 800m', imageData:placeholderImage},
-        {id:uuid(), name:'TC-2B', commonName:'Construction 400m', imageData:placeholderImage},
-        {id:uuid(), name:'TC-4', commonName:'Lane Ends', imageData:placeholderImage},
-        {id:uuid(), name:'TC-21', commonName:'Construction Ahead', imageData:placeholderImage},
-        {id:uuid(), name:'TC-22', commonName:'Flagperson Ahead', imageData:placeholderImage},
-        {id:uuid(), name:'Rb-31', commonName:'Speed Limit 60', imageData:placeholderImage},
-        {id:uuid(), name:'Rb-32', commonName:'Speed Limit 50', imageData:placeholderImage},
-        {id:uuid(), name:'Ra-1', commonName:'Stop', imageData:placeholderImage},
-        {id:uuid(), name:'Ra-2', commonName:'Yield', imageData:placeholderImage},
-        {id:uuid(), name:'Wc-2', commonName:'Curve Warning', imageData:placeholderImage},
-        {id:uuid(), name:'Wc-4', commonName:'Intersection Ahead', imageData:placeholderImage}
-      ];
-      
-      signs = sampleSigns;
-      routes = [];
-      permLogs = [];
-      dailyLogs = [];
-      trafficPlans = [];
-      currentFileName = null;
-      currentFileData = null;
-      hasUnsavedChanges = true;
-      
-      renderSigns();
-      renderRoutes();
-      renderRouteSelect();
-      updateFileStatus();
-      showNotification('✅ Extended sample signs library loaded!');
     }
-
-    // File management event handlers
-    document.getElementById('load-signs-file-btn').onclick = () => {
-      if (hasUnsavedChanges && !confirm('You have unsaved changes. Load different file anyway?')) {
-        return;
-      }
-      document.getElementById('signs-file-input').click();
-    };
-
-    document.getElementById('create-new-library-btn').onclick = createNewLibrary;
-    document.getElementById('save-signs-file-btn').onclick = () => saveSignsFile(false);
-    document.getElementById('save-as-signs-file-btn').onclick = () => saveSignsFile(true);
-    document.getElementById('load-sample-btn').onclick = loadSampleSigns;
     
-    document.getElementById('clear-library-btn').onclick = () => {
-      if (confirm('Clear all signs? This cannot be undone.')) {
-        signs = [];
-        routes = [];
-        hasUnsavedChanges = true;
-        renderSigns();
-        renderRoutes();
-        renderRouteSelect();
-        updateFileStatus();
-        showNotification('🗑️ Signs library cleared');
+    // Helper function to create sample signs in Firebase (for first-time setup)
+    async function createSampleSignsInFirebase() {
+      try {
+        console.log('🌱 Creating sample signs in Firebase...');
+        
+        const sampleSigns = [
+          { name: 'TC-1', commonName: 'Road Work Ahead' },
+          { name: 'TC-2A', commonName: 'Construction 800m' },
+          { name: 'TC-2B', commonName: 'Construction 400m' },
+          { name: 'TC-4', commonName: 'Lane Ends' },
+          { name: 'TC-21', commonName: 'Construction Ahead' },
+          { name: 'TC-22', commonName: 'Flagperson Ahead' },
+          { name: 'Ra-1', commonName: 'Stop' },
+          { name: 'Ra-2', commonName: 'Yield' }
+        ];
+        
+        const { collection, addDoc } = window.firebaseUtils;
+        const signsCollection = collection(window.firebaseDb, 'signs');
+        
+        for (const sign of sampleSigns) {
+          await addDoc(signsCollection, {
+            name: sign.name,
+            commonName: sign.commonName,
+            created: new Date().toISOString(),
+            modified: new Date().toISOString()
+          });
+        }
+        
+        console.log('✅ Sample signs created successfully');
+        showNotification('✅ Sample signs created! Database is now ready.');
+        
+      } catch (error) {
+        console.error('❌ Error creating sample signs:', error);
+        showNotification(`❌ Error creating sample signs: ${error.message}`, 'warning');
       }
-    };
+    }
+    
+    // Make function available globally
+    window.createSampleSignsInFirebase = createSampleSignsInFirebase;
+    
+    // Build image URL from GitHub Pages images folder
+    function buildImageUrl(technicalName) {
+      // For GitHub Pages hosting at: https://og-nater-tater.github.io/mywebiste/signs/
+      // Images should be in: https://og-nater-tater.github.io/mywebiste/signs/images/
+      const cleanName = technicalName.replace(/[^a-zA-Z0-9\-\_]/g, '');
+      return `./images/${cleanName}.jpg`;
+    }
+    
+    // Alternative: if you want to try multiple extensions
+    function getImageWithFallback(technicalName) {
+      const cleanName = technicalName.replace(/[^a-zA-Z0-9\-\_]/g, '');
+      const extensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+      
+      // For now, default to .jpg - you can enhance this later to check which exists
+      return `./images/${cleanName}.jpg`;
+    }
+    
+    // Add new sign to Firebase
+    async function addSignToFirebase(signData) {
+      try {
+        const { collection, addDoc } = window.firebaseUtils;
+        const signsCollection = collection(window.firebaseDb, 'signs');
+        
+        const docRef = await addDoc(signsCollection, {
+          name: signData.name,
+          commonName: signData.commonName,
+          imageData: signData.imageData,
+          created: new Date().toISOString(),
+          modified: new Date().toISOString()
+        });
+        
+        console.log('✅ Sign added to Firebase:', docRef.id);
+        showNotification(`✅ Sign "${signData.name}" saved to cloud!`);
+        
+      } catch (error) {
+        console.error('❌ Error adding sign to Firebase:', error);
+        showNotification(`❌ Failed to save sign: ${error.message}`, 'warning');
+      }
+    }
+    
+    // Update existing sign in Firebase
+    async function updateSignInFirebase(signId, signData) {
+      try {
+        const { doc, updateDoc } = window.firebaseUtils;
+        const signDoc = doc(window.firebaseDb, 'signs', signId);
+        
+        await updateDoc(signDoc, {
+          name: signData.name,
+          commonName: signData.commonName,
+          imageData: signData.imageData,
+          modified: new Date().toISOString()
+        });
+        
+        console.log('✅ Sign updated in Firebase:', signId);
+        showNotification(`✅ Sign "${signData.name}" updated in cloud!`);
+        
+      } catch (error) {
+        console.error('❌ Error updating sign in Firebase:', error);
+        showNotification(`❌ Failed to update sign: ${error.message}`, 'warning');
+      }
+    }
+    
+    // Delete sign from Firebase
+    async function deleteSignFromFirebase(signId) {
+      try {
+        const { doc, deleteDoc } = window.firebaseUtils;
+        const signDoc = doc(window.firebaseDb, 'signs', signId);
+        
+        await deleteDoc(signDoc);
+        
+        console.log('✅ Sign deleted from Firebase:', signId);
+        showNotification(`✅ Sign deleted from cloud!`);
+        
+      } catch (error) {
+        console.error('❌ Error deleting sign from Firebase:', error);
+        showNotification(`❌ Failed to delete sign: ${error.message}`, 'warning');
+      }
+    }
 
-    // File input handler
-    document.getElementById('signs-file-input').onchange = (e) => {
-      const file = e.target.files[0];
-      if (file && file.type === 'application/json') {
-        loadSignsFile(file);
-        e.target.value = ''; // Reset input
+    // Update search input based on loaded signs
+    function updateSearchInput() {
+      const searchInput = document.getElementById('sign-search');
+      
+      if (signs.length === 0) {
+        searchInput.placeholder = 'No signs available';
+        searchInput.disabled = true;
       } else {
-        showNotification('❌ Please select a valid JSON file', 'warning');
+        searchInput.placeholder = `Search ${signs.length} signs by name or code (e.g., TC-21, Stop, Construction)...`;
+        searchInput.disabled = false;
       }
-    };
+    }
 
     // Notification function
     function showNotification(message, type = 'success') {
@@ -984,11 +961,13 @@
       }, 3000);
     }
 
-    // PDF Download Function
-    function downloadPDF(pdfData, filename, description = '') {
+    // PDF Download Function - saves to GitHub Pages structure
+    function downloadPDF(pdfData, signTechnicalName, description = '') {
       try {
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-        const cleanFilename = `${filename.replace(/[^a-zA-Z0-9_-]/g, '_')}_${timestamp}.pdf`;
+        // Name PDF after technical sign name for GitHub Pages structure
+        const cleanSignName = signTechnicalName.replace(/[^a-zA-Z0-9\-\_]/g, '');
+        const filename = `${cleanSignName}.pdf`;
         
         const byteCharacters = atob(pdfData);
         const byteNumbers = new Array(byteCharacters.length);
@@ -1000,19 +979,76 @@
 
         const link = document.createElement('a');
         link.href = window.URL.createObjectURL(blob);
-        link.download = cleanFilename;
+        link.download = filename;
         
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(link.href);
         
-        showNotification(`✅ ${description || 'PDF'} downloaded: ${cleanFilename}`);
+        showNotification(`✅ ${description} downloaded: ${filename}`);
+        showNotification(`📁 Upload ${filename} to your GitHub /signs/ folder for access via URL`, 'info');
+        
+        // Log PDF metadata to Firestore for tracking
+        logPDFToFirestore(filename, description, signTechnicalName, timestamp);
         
       } catch (error) {
         console.error('Error downloading PDF:', error);
-        showNotification(`❌ Error downloading ${description || 'PDF'}: ${error.message}`, 'warning');
+        showNotification(`❌ Error downloading ${description}: ${error.message}`, 'warning');
       }
+    }
+    
+    // Log PDF metadata to Firestore (for audit trail)
+    async function logPDFToFirestore(filename, description, signTechnicalName, timestamp) {
+      try {
+        const { collection, addDoc } = window.firebaseUtils;
+        const pdfsCollection = collection(window.firebaseDb, 'pdf_logs');
+        
+        const pdfRecord = {
+          filename: filename,
+          description: description,
+          signTechnicalName: signTechnicalName,
+          githubUrl: `https://og-nater-tater.github.io/mywebiste/signs/${filename}`,
+          created: timestamp,
+          type: 'local_download'
+        };
+        
+        await addDoc(pdfsCollection, pdfRecord);
+        console.log('✅ PDF metadata logged to Firestore');
+        
+      } catch (error) {
+        console.error('❌ Error logging PDF metadata:', error);
+        // Don't show error to user - this is just for tracking
+      }
+    }
+    
+    // Helper to build PDF URL from YOUR specific GitHub Pages structure
+    function buildPDFUrl(signTechnicalName) {
+      const cleanName = signTechnicalName.replace(/[^a-zA-Z0-9\-\_]/g, '');
+      // Your GitHub Pages structure: https://og-nater-tater.github.io/mywebiste/signs/
+      // PDFs are directly in the /signs/ folder, named by technical name
+      return `https://og-nater-tater.github.io/mywebiste/signs/${cleanName}.pdf`;
+    }
+    
+    // Helper to check if PDF exists on YOUR GitHub Pages
+    async function checkPDFExists(signTechnicalName) {
+      try {
+        const pdfUrl = buildPDFUrl(signTechnicalName);
+        console.log(`🔍 Checking PDF: ${pdfUrl}`);
+        const response = await fetch(pdfUrl, { method: 'HEAD' });
+        return response.ok;
+      } catch (error) {
+        console.log(`❌ Error checking PDF: ${error.message}`);
+        return false;
+      }
+    }
+    
+    // Helper to open existing PDF from YOUR GitHub Pages
+    function openExistingPDF(signTechnicalName) {
+      const pdfUrl = buildPDFUrl(signTechnicalName);
+      console.log(`📄 Opening PDF: ${pdfUrl}`);
+      window.open(pdfUrl, '_blank');
+      showNotification(`📄 Opening ${signTechnicalName}.pdf from GitHub`);
     }
 
     // Navigation
@@ -1106,19 +1142,38 @@
       quitBtn.disabled = false;
     };
 
-    // Sign Library
+    // Sign Library Search - Firebase-backed with CRUD operations and PDF links
     function renderSigns(){
       const container=document.getElementById('sign-list'),
             q=document.getElementById('sign-search').value.toLowerCase();
       container.innerHTML='';
       
+      // Update count
       document.getElementById('sign-count').textContent = signs.length;
       
-      const filtered=signs.filter(s=>(s.name+' '+s.commonName).toLowerCase().includes(q));
-      if(!filtered.length){
-        container.innerHTML='<div style="padding:.6rem;color:#666">No signs found.</div>';
+      // Handle loading state
+      if (signs.length === 0) {
+        container.innerHTML='<div style="padding:.6rem;color:#666;text-align:center">📂 No signs in database. <button onclick="openSignModal()" style="color:#005a9c;background:none;border:none;cursor:pointer;text-decoration:underline">Add your first sign</button></div>';
         return;
       }
+      
+      // Filter signs based on search
+      const filtered = signs.filter(s => {
+        const searchText = (s.name + ' ' + s.commonName).toLowerCase();
+        return searchText.includes(q);
+      });
+      
+      // Handle no search results
+      if(!filtered.length){
+        if(q.trim()) {
+          container.innerHTML=`<div style="padding:.6rem;color:#666;text-align:center">No signs found matching "${q}". <button onclick="document.getElementById('sign-search').value=''; renderSigns();" style="color:#005a9c;background:none;border:none;cursor:pointer;text-decoration:underline">Clear search</button></div>`;
+        } else {
+          container.innerHTML='<div style="padding:.6rem;color:#666;text-align:center">No signs found.</div>';
+        }
+        return;
+      }
+      
+      // Render filtered signs with edit/delete buttons and PDF links
       filtered.forEach(s=>{
         const d=document.createElement('div');
         d.innerHTML=`
@@ -1127,27 +1182,83 @@
             <span style="flex:1;color:#00345b"><strong>${s.name}</strong></span>
             <span style="flex:1;color:#00345b">${s.commonName}</span>
           </div>
-          <div>
-            <button class="edit-sign" data-id="${s.id}">✎</button>
-            <button class="delete-sign" data-id="${s.id}">×</button>
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <button onclick="openPDFForSign('${s.name}')" title="Open/Check PDF" style="background:none;border:none;color:#28a745;cursor:pointer;font-size:0.9rem">📄</button>
+            <button class="edit-sign" data-id="${s.id}" title="Edit sign" style="background:none;border:none;color:#005a9c;cursor:pointer;margin-right:0.5rem">✎</button>
+            <button class="delete-sign" data-id="${s.id}" title="Delete sign" style="background:none;border:none;color:#d00;cursor:pointer">×</button>
           </div>`;
+        
         d.querySelector('.edit-sign').onclick=()=>openSignModal(s);
-        d.querySelector('.delete-sign').onclick=()=>{
-          if(confirm('Delete?')){
-            signs=signs.filter(x=>x.id!==s.id); 
-            markChanged();
-            renderSigns(); 
-            renderRoutes(); 
-            renderRouteSelect();
+        d.querySelector('.delete-sign').onclick=async ()=>{
+          if(confirm(`Delete "${s.commonName}"? This will remove it from the cloud database.`)){
+            await deleteSignFromFirebase(s.id);
           }
         };
         container.append(d);
       });
+      
+      // Add search result summary if searching
+      if(q.trim() && filtered.length > 0) {
+        const summary = document.createElement('div');
+        summary.style.cssText = 'padding:0.5rem 1rem;background:#e3f2fd;border-bottom:1px solid #90caf9;font-size:0.85rem;color:#1565c0;text-align:center';
+        summary.innerHTML = `Found ${filtered.length} of ${signs.length} signs matching "${q}" <button onclick="document.getElementById('sign-search').value=''; renderSigns();" style="color:#1565c0;background:none;border:none;cursor:pointer;text-decoration:underline;margin-left:0.5rem">Clear</button>`;
+        container.insertBefore(summary, container.firstChild);
+      }
     }
     
-    document.getElementById('sign-search').addEventListener('input',renderSigns);
+    // Open PDF for a specific sign from YOUR GitHub structure
+    async function openPDFForSign(signTechnicalName) {
+      const pdfExists = await checkPDFExists(signTechnicalName);
+      
+      if (pdfExists) {
+        openExistingPDF(signTechnicalName);
+      } else {
+        const expectedUrl = buildPDFUrl(signTechnicalName);
+        const message = `PDF not found for ${signTechnicalName}
 
-    // Sign Modal
+Expected location: ${expectedUrl}
+
+To add this PDF to YOUR GitHub repository:
+1. Create/generate the PDF for this sign
+2. Name it exactly: ${signTechnicalName}.pdf
+3. Upload it directly to: /signs/ folder (NOT in a subfolder)
+4. Your repo structure should be:
+   /signs/
+   ├── index.html
+   ├── ${signTechnicalName}.pdf ← HERE
+   └── /images/
+
+5. Commit changes and wait 2-3 minutes for GitHub Pages to update
+
+Would you like to open the expected URL anyway to check?`;
+        
+        if (confirm(message)) {
+          openExistingPDF(signTechnicalName);
+        }
+      }
+    }
+    
+    // Make function globally available
+    window.openPDFForSign = openPDFForSign;
+    
+    // Enhanced search input handling
+    document.getElementById('sign-search').addEventListener('input', function() {
+      // Debounce search for better performance with large libraries
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(() => {
+        renderSigns();
+      }, 150);
+    });
+    
+    // Clear search on escape key
+    document.getElementById('sign-search').addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        this.value = '';
+        renderSigns();
+      }
+    });
+
+    // Sign Modal with Firebase integration
     const modal=document.getElementById('add-sign-modal'),
           form=document.getElementById('add-sign-form'),
           prev=document.getElementById('sign-preview'),
@@ -1184,18 +1295,28 @@
       if(!tn||!cn){alert('Names required');return;}
       
       const f=imgIn.files[0];
-      const processSign = (img) => {
+      const processSign = async (img) => {
+        const signData = {
+          name: tn,
+          commonName: cn,
+          imageData: img || buildImageUrl(tn) // Use GitHub images or uploaded image
+        };
+        
         if(editingSign){
-          const i=signs.findIndex(x=>x.id===editingSign.id);
-          signs[i].name=tn; signs[i].commonName=cn; signs[i].imageData=img;
+          // Update existing sign in Firebase
+          await updateSignInFirebase(editingSign.id, signData);
         } else {
-          signs.push({id:uuid(),name:tn,commonName:cn,imageData:img});
+          // Add new sign to Firebase
+          await addSignToFirebase(signData);
         }
-        markChanged();
+        
         modal.style.display='none';
-        renderSigns(); 
-        renderRoutes(); 
-        renderRouteSelect();
+        
+        // Clear search to show updated results
+        const searchInput = document.getElementById('sign-search');
+        if (searchInput && searchInput.value) {
+          searchInput.value = '';
+        }
       };
       
       if(f) {
@@ -1207,27 +1328,872 @@
       }
     };
 
-    // Routes functionality (stub)
+    // Routes functionality - full implementation
+    let editingRoute = null;
+    
     function renderRoutes(){
       const routeList=document.getElementById('route-list');
       if(!routes.length){
-        routeList.innerHTML='<div style="padding:.6rem;color:#666">No routes created yet.</div>';
+        routeList.innerHTML='<div style="padding:.6rem;color:#666">No routes created yet. Use the form above to create your first route.</div>';
         return;
       }
-      // Full routes implementation would go here
-      routeList.innerHTML=`<div style="padding:.6rem;color:#666">${routes.length} routes loaded from file.</div>`;
+      
+      routeList.innerHTML='';
+      routes.forEach(route => {
+        const routeDiv = document.createElement('div');
+        routeDiv.innerHTML = `
+          <div style="flex:1">
+            <strong style="color:#00345b">${route.name}</strong>
+            <small style="display:block;color:#666;margin-top:0.25rem">${route.entries?.length || 0} sign entries</small>
+          </div>
+          <div>
+            <button onclick="editRoute('${route.id}')" style="background:none;border:none;color:#005a9c;cursor:pointer;margin-right:0.5rem" title="Edit route">✎</button>
+            <button onclick="deleteRoute('${route.id}')" style="background:none;border:none;color:#d00;cursor:pointer" title="Delete route">×</button>
+          </div>
+        `;
+        routeList.appendChild(routeDiv);
+      });
     }
     
     function renderRouteSelect(){
       const sel=document.getElementById('perm-route-select');
-      sel.innerHTML='<option value="">-- Select --</option>';
+      sel.innerHTML='<option value="">-- Select a Route --</option>';
       routes.forEach(r=>{
         const o=document.createElement('option');
         o.value=r.id;
         o.text=r.name;
         sel.append(o);
       });
+      
+      // Enable/disable start inspection button
+      document.getElementById('start-perm-inspection-btn').disabled = routes.length === 0;
     }
+    
+    function addRouteEntry() {
+      const tbody = document.getElementById('route-entries-body');
+      const entryId = uuid();
+      
+      const row = document.createElement('tr');
+      row.setAttribute('data-entry-id', entryId);
+      row.innerHTML = `
+        <td>
+          <select class="route-sign-select" style="width:100%;padding:0.25rem" required>
+            <option value="">-- Select Sign --</option>
+            ${signs.map(sign => `<option value="${sign.id}">${sign.name} - ${sign.commonName}</option>`).join('')}
+          </select>
+        </td>
+        <td><input type="text" class="route-station" placeholder="10+000.00" maxlength="9" style="width:100%;padding:0.25rem"/></td>
+        <td><input type="text" class="route-highway" placeholder="HWY 401 E" style="width:100%;padding:0.25rem"/></td>
+        <td><input type="text" class="route-end" placeholder="10+100.00" maxlength="9" style="width:100%;padding:0.25rem"/></td>
+        <td><button type="button" onclick="removeRouteEntry('${entryId}')" style="background:none;border:none;color:#d00;cursor:pointer">×</button></td>
+      `;
+      
+      tbody.appendChild(row);
+    }
+    
+    function removeRouteEntry(entryId) {
+      const row = document.querySelector(`tr[data-entry-id="${entryId}"]`);
+      if (row) {
+        row.remove();
+      }
+    }
+    
+    function clearRouteForm() {
+      document.getElementById('route-name').value = '';
+      document.getElementById('route-entries-body').innerHTML = '';
+      editingRoute = null;
+      document.querySelector('#route-form button[type="submit"]').textContent = 'Save Route';
+    }
+    
+    function saveRoute(formData) {
+      const routeName = formData.get('route-name').trim();
+      if (!routeName) {
+        alert('Route name is required');
+        return;
+      }
+      
+      // Collect route entries
+      const entries = [];
+      const rows = document.querySelectorAll('#route-entries-body tr');
+      
+      rows.forEach(row => {
+        const signId = row.querySelector('.route-sign-select').value;
+        const station = row.querySelector('.route-station').value.trim();
+        const highway = row.querySelector('.route-highway').value.trim();
+        const end = row.querySelector('.route-end').value.trim();
+        
+        if (signId) { // Only add entries with a selected sign
+          const sign = signs.find(s => s.id === signId);
+          entries.push({
+            id: uuid(),
+            signId: signId,
+            signName: sign ? sign.name : '',
+            signCommonName: sign ? sign.commonName : '',
+            station: station,
+            highway: highway,
+            end: end
+          });
+        }
+      });
+      
+      if (entries.length === 0) {
+        alert('Please add at least one sign entry to the route');
+        return;
+      }
+      
+      const routeData = {
+        id: editingRoute ? editingRoute.id : uuid(),
+        name: routeName,
+        entries: entries,
+        created: editingRoute ? editingRoute.created : new Date().toISOString(),
+        modified: new Date().toISOString()
+      };
+      
+      if (editingRoute) {
+        // Update existing route
+        const index = routes.findIndex(r => r.id === editingRoute.id);
+        routes[index] = routeData;
+        showNotification(`✅ Route "${routeName}" updated!`);
+      } else {
+        // Add new route
+        routes.push(routeData);
+        showNotification(`✅ Route "${routeName}" created with ${entries.length} signs!`);
+      }
+      
+      // Clear form and refresh displays
+      clearRouteForm();
+      renderRoutes();
+      renderRouteSelect();
+    }
+    
+    function editRoute(routeId) {
+      const route = routes.find(r => r.id === routeId);
+      if (!route) return;
+      
+      editingRoute = route;
+      
+      // Fill form
+      document.getElementById('route-name').value = route.name;
+      document.querySelector('#route-form button[type="submit"]').textContent = 'Update Route';
+      
+      // Clear existing entries
+      document.getElementById('route-entries-body').innerHTML = '';
+      
+      // Add route entries
+      route.entries.forEach(entry => {
+        addRouteEntry();
+        const lastRow = document.querySelector('#route-entries-body tr:last-child');
+        lastRow.querySelector('.route-sign-select').value = entry.signId;
+        lastRow.querySelector('.route-station').value = entry.station || '';
+        lastRow.querySelector('.route-highway').value = entry.highway || '';
+        lastRow.querySelector('.route-end').value = entry.end || '';
+      });
+      
+      // Scroll to form
+      document.getElementById('route-form').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function deleteRoute(routeId) {
+      const route = routes.find(r => r.id === routeId);
+      if (!route) return;
+      
+      if (confirm(`Delete route "${route.name}"? This cannot be undone.`)) {
+        routes = routes.filter(r => r.id !== routeId);
+        renderRoutes();
+        renderRouteSelect();
+        showNotification(`🗑️ Route "${route.name}" deleted`);
+        
+        // Clear form if editing this route
+        if (editingRoute && editingRoute.id === routeId) {
+          clearRouteForm();
+        }
+      }
+    }
+    
+    // Route form event handlers
+    document.getElementById('add-route-entry-btn').addEventListener('click', addRouteEntry);
+    
+    document.getElementById('route-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      saveRoute(formData);
+    });
+    
+    // Global functions for inline handlers
+    window.editRoute = editRoute;
+    window.deleteRoute = deleteRoute;
+    window.removeRouteEntry = removeRouteEntry;
+
+    // Permanent inspection functionality
+    document.getElementById('perm-route-select').addEventListener('change', function() {
+      const routeId = this.value;
+      document.getElementById('start-perm-inspection-btn').disabled = !routeId;
+    });
+    
+    document.getElementById('start-perm-inspection-btn').addEventListener('click', function() {
+      const routeId = document.getElementById('perm-route-select').value;
+      if (!routeId) return;
+      
+      const route = routes.find(r => r.id === routeId);
+      if (!route) return;
+      
+      startPermInspection(route);
+    });
+    
+    function startPermInspection(route) {
+      document.getElementById('perm-select-div').style.display = 'none';
+      document.getElementById('perm-inspect-div').style.display = 'block';
+      document.getElementById('perm-inspect-title').textContent = `Inspecting Route: ${route.name}`;
+      
+      // Clear previous entries
+      permEntries = [];
+      
+      // Create inspection cards for each route entry
+      const permGrid = document.getElementById('perm-grid');
+      permGrid.innerHTML = '';
+      
+      route.entries.forEach(entry => {
+        const sign = signs.find(s => s.id === entry.signId);
+        if (!sign) return;
+        
+        const inspectionEntry = {
+          id: uuid(),
+          routeEntryId: entry.id,
+          signId: entry.signId,
+          station: entry.station,
+          highway: entry.highway,
+          status: 'present', // Default status
+          notes: '',
+          timestamp: new Date().toISOString()
+        };
+        
+        permEntries.push(inspectionEntry);
+        
+        const card = document.createElement('div');
+        card.className = 'perm-card';
+        card.innerHTML = `
+          <img src="${sign.imageData}" alt="${sign.name}">
+          <div style="text-align:center">
+            <h4 style="color:#00345b;margin-bottom:0.25rem">${sign.name}</h4>
+            <p style="font-size:0.85rem;color:#666;margin-bottom:0.5rem">${sign.commonName}</p>
+            <p style="font-size:0.8rem;color:#333;margin-bottom:0.5rem">
+              <strong>Station:</strong> ${entry.station || 'N/A'}<br>
+              <strong>Highway:</strong> ${entry.highway || 'N/A'}
+            </p>
+            <select onchange="updatePermStatus('${inspectionEntry.id}', this.value)" style="width:100%;padding:0.25rem;margin-bottom:0.5rem">
+              <option value="present">✅ Present</option>
+              <option value="missing">❌ Missing</option>
+              <option value="damaged">⚠️ Damaged</option>
+              <option value="repositioned">🔄 Repositioned</option>
+            </select>
+            <textarea placeholder="Notes (optional)" onchange="updatePermNotes('${inspectionEntry.id}', this.value)" 
+                      style="width:100%;height:50px;padding:0.25rem;font-size:0.8rem;resize:vertical"></textarea>
+          </div>
+        `;
+        
+        permGrid.appendChild(card);
+      });
+    }
+    
+    function updatePermStatus(entryId, status) {
+      const entry = permEntries.find(e => e.id === entryId);
+      if (entry) {
+        entry.status = status;
+        entry.modified = new Date().toISOString();
+      }
+    }
+    
+    function updatePermNotes(entryId, notes) {
+      const entry = permEntries.find(e => e.id === entryId);
+      if (entry) {
+        entry.notes = notes;
+        entry.modified = new Date().toISOString();
+      }
+    }
+    
+    document.getElementById('save-permanent-btn').addEventListener('click', function() {
+      if (permEntries.length === 0) {
+        alert('No inspection data to save');
+        return;
+      }
+      
+      const routeId = document.getElementById('perm-route-select').value;
+      const route = routes.find(r => r.id === routeId);
+      
+      const inspectionLog = {
+        id: uuid(),
+        routeId: routeId,
+        routeName: route.name,
+        entries: permEntries,
+        timestamp: new Date().toISOString(),
+        inspector: 'Current User' // Could be made configurable
+      };
+      
+      // Save to permanent logs
+      permLogs.push(inspectionLog);
+      
+      // Generate PDF (simplified)
+      generatePermInspectionPDF(inspectionLog);
+      
+      // Reset form
+      document.getElementById('perm-select-div').style.display = 'block';
+      document.getElementById('perm-inspect-div').style.display = 'none';
+      document.getElementById('perm-route-select').value = '';
+      document.getElementById('start-perm-inspection-btn').disabled = true;
+      
+      showNotification(`✅ Permanent inspection completed for "${route.name}"`);
+      renderInspectionList();
+    });
+    
+    function generatePermInspectionPDF(inspectionLog) {
+      // Generate PDF content for the inspection
+      const content = `
+PERMANENT SIGN INSPECTION REPORT
+Route: ${inspectionLog.routeName}
+Date: ${new Date(inspectionLog.timestamp).toLocaleDateString()}
+Inspector: ${inspectionLog.inspector}
+
+INSPECTION RESULTS:
+${inspectionLog.entries.map(entry => {
+  const sign = signs.find(s => s.id === entry.signId);
+  return `
+• ${sign?.name} - ${sign?.commonName}
+  Station: ${entry.station || 'N/A'}
+  Highway: ${entry.highway || 'N/A'}
+  Status: ${entry.status}
+  Notes: ${entry.notes || 'None'}
+`;
+}).join('')}
+
+Generated: ${new Date().toLocaleString()}
+      `;
+      
+      // Convert to base64 for download
+      const blob = new Blob([content], { type: 'text/plain' });
+      const reader = new FileReader();
+      reader.onload = function() {
+        const base64 = reader.result.split(',')[1];
+        
+        // Use route name as the PDF name (or first sign name if single sign)
+        const routeNameClean = inspectionLog.routeName.replace(/[^a-zA-Z0-9\-\_]/g, '_');
+        const pdfName = `inspection_${routeNameClean}`;
+        
+        downloadPDF(
+          base64,
+          pdfName,
+          'Permanent Inspection Report'
+        );
+      };
+      reader.readAsDataURL(blob);
+    }
+    
+    function renderInspectionList() {
+      const inspectionList = document.getElementById('inspection-list');
+      const allLogs = [...permLogs, ...dailyLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      if (allLogs.length === 0) {
+        inspectionList.innerHTML = '<div style="padding:.6rem;color:#666">No inspections completed yet.</div>';
+        return;
+      }
+      
+      inspectionList.innerHTML = '';
+      allLogs.forEach(log => {
+        const logDiv = document.createElement('div');
+        const isPermLog = permLogs.includes(log);
+        const date = new Date(log.timestamp).toLocaleDateString();
+        
+        logDiv.innerHTML = `
+          <div style="flex:1">
+            <strong style="color:#00345b">${isPermLog ? '🛣️ Permanent' : '📅 Daily'}: ${log.routeName || 'Daily Inspection'}</strong>
+            <small style="display:block;color:#666;margin-top:0.25rem">${date} - ${log.entries?.length || 0} entries</small>
+          </div>
+          <div>
+            <button onclick="downloadInspectionReport('${log.id}')" style="background:none;border:none;color:#005a9c;cursor:pointer" title="Download report">📥</button>
+          </div>
+        `;
+        inspectionList.appendChild(logDiv);
+      });
+    }
+    
+    // Debug helper to test Firebase connection
+    function testFirebaseConnection() {
+      console.log('🔧 Testing Firebase connection...');
+      
+      if (!window.firebaseDb) {
+        console.error('❌ Firebase not initialized');
+        return false;
+      }
+      
+      try {
+        const { collection } = window.firebaseUtils;
+        const testCollection = collection(window.firebaseDb, 'signs');
+        console.log('✅ Firebase connection OK');
+        console.log('🔍 Signs collection reference:', testCollection);
+        return true;
+      } catch (error) {
+        console.error('❌ Firebase connection test failed:', error);
+        return false;
+      }
+    }
+    
+    // Global functions for permanent inspection
+    window.updatePermStatus = updatePermStatus;
+    window.updatePermNotes = updatePermNotes;
+    window.downloadInspectionReport = function(logId) {
+      const log = [...permLogs, ...dailyLogs].find(l => l.id === logId);
+      if (log) {
+        const isPermLog = permLogs.includes(log);
+        if (isPermLog) {
+          generatePermInspectionPDF(log);
+        } else {
+          // Handle daily log download if needed
+          showNotification('Daily inspection download - feature coming soon');
+        }
+      }
+    };
+    
+    // Add global debug functions
+    window.testFirebaseConnection = testFirebaseConnection;
+    window.debugFirebase = function() {
+      console.log('=== FIREBASE DEBUG INFO ===');
+      console.log('Firebase DB:', window.firebaseDb);
+      console.log('Firebase Storage:', window.firebaseStorage);
+      console.log('Firebase Utils:', window.firebaseUtils);
+      console.log('Current signs:', signs);
+      testFirebaseConnection();
+    };
+    
+    // Helper to test image loading from GitHub Pages
+    window.testImageLoading = function(signName = 'TC-1') {
+      const imageUrl = buildImageUrl(signName);
+      console.log(`🖼️ Testing image: ${imageUrl}`);
+      
+      const img = new Image();
+      img.onload = () => console.log(`✅ Image loaded successfully: ${imageUrl}`);
+      img.onerror = () => console.log(`❌ Image failed to load: ${imageUrl}`);
+      img.src = imageUrl;
+      
+      return imageUrl;
+    };
+    
+    // Helper to test PDF loading from YOUR specific GitHub Pages structure
+    window.testPDFLoading = async function(signName = 'TC-1') {
+      const pdfUrl = buildPDFUrl(signName);
+      console.log(`📄 Testing PDF: ${pdfUrl}`);
+      console.log(`📁 Expected location: /signs/${signName}.pdf in your repo`);
+      
+      const exists = await checkPDFExists(signName);
+      if (exists) {
+        console.log(`✅ PDF exists and accessible: ${pdfUrl}`);
+      } else {
+        console.log(`❌ PDF not found: ${pdfUrl}`);
+        console.log(`💡 Upload ${signName}.pdf directly to your /signs/ folder`);
+      }
+      
+      return { url: pdfUrl, exists };
+    };
+    
+    // Helper to test YOUR complete GitHub Pages structure
+    window.testGitHubPagesStructure = async function() {
+      console.log('🔧 Testing YOUR GitHub Pages structure...');
+      console.log('📍 Base URL: https://og-nater-tater.github.io/mywebiste/signs/');
+      console.log('📁 Repository: https://github.com/og-nater-tater/mywebiste/tree/main/signs/');
+      
+      const testSigns = ['TC-1', 'TC-2A', 'Ra-1'];
+      
+      for (const signName of testSigns) {
+        console.log(`\n--- Testing ${signName} ---`);
+        
+        // Test image
+        const imageUrl = buildImageUrl(signName);
+        const imgTest = new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = imageUrl;
+        });
+        
+        // Test PDF
+        const pdfExists = await checkPDFExists(signName);
+        const imageExists = await imgTest;
+        
+        console.log(`📷 Image (${imageUrl}): ${imageExists ? '✅' : '❌'}`);
+        console.log(`📄 PDF (${buildPDFUrl(signName)}): ${pdfExists ? '✅' : '❌'}`);
+        
+        if (!pdfExists) {
+          console.log(`   💡 Upload ${signName}.pdf to /signs/ folder (NOT in subfolder)`);
+        }
+      }
+      
+      console.log('\n🎯 YOUR Structure Should Be:');
+      console.log('/signs/');
+      console.log('├── index.html');
+      console.log('├── TC-1.pdf         ← PDFs HERE (by technical name)');
+      console.log('├── TC-2A.pdf        ← PDFs HERE');
+      console.log('├── Ra-1.pdf         ← PDFs HERE');
+      console.log('└── /images/         ← Images in subfolder');
+      console.log('    ├── TC-1.jpg');
+      console.log('    ├── TC-2A.jpg');
+      console.log('    └── Ra-1.jpg');
+    };
+    
+    // Show detailed setup instructions
+    window.showSetupInstructions = function() {
+      const instructions = `
+🔥 FIREBASE SETUP INSTRUCTIONS
+
+1. Go to: https://console.firebase.google.com
+2. Click "Create a project" 
+3. Name it: "construction-signs-app"
+4. Disable Google Analytics
+5. Click "Create project"
+
+6. Enable Firestore:
+   • Click "Firestore Database" → "Create database"
+   • Choose "Start in test mode" → Select location → Done
+
+7. Enable Storage:
+   • Click "Storage" → "Get started" → Keep default rules → Same location → Done
+
+8. Get Config:
+   • Click ⚙️ → "Project settings"
+   • Scroll to "Your apps" → Click </> Web icon
+   • Name: "Construction Signs Web App" → Register app
+   • COPY the firebaseConfig object
+
+9. Update Code:
+   • Replace the firebaseConfig object around line 680 in this HTML file
+   • Save and refresh the page
+
+10. Test:
+    • Open browser console (F12)
+    • Type: debugFirebase()
+    • Should see "Firebase connection OK"
+
+📁 GITHUB PAGES STRUCTURE:
+Your PDFs should be named after technical sign names:
+• TC-1.pdf, TC-2A.pdf, Ra-1.pdf, etc.
+• Place them directly in /signs/ folder (not in subfolder)
+• Images go in /signs/images/ folder
+
+🧪 TESTING COMMANDS:
+• debugFirebase() - Test Firebase connection
+• testImageLoading('TC-1') - Test image loading
+• testPDFLoading('TC-1') - Test PDF loading  
+• testGitHubPagesStructure() - Test complete structure
+
+Need help? Check console errors for details.
+      `;
+      
+      alert(instructions);
+      console.log(instructions);
+    };
+    
+    // Complete setup status check
+    window.checkSetupStatus = async function() {
+      console.log('🔧 SETUP STATUS CHECK');
+      console.log('========================');
+      
+      // Firebase check
+      const firebaseOK = testFirebaseConnection();
+      console.log(`🔥 Firebase: ${firebaseOK ? '✅ Connected' : '❌ Not connected'}`);
+      
+      // Signs data check
+      console.log(`📋 Signs in database: ${signs.length}`);
+      
+      // GitHub Pages structure check
+      console.log('📁 GitHub Pages structure:');
+      await testGitHubPagesStructure();
+      
+      console.log('\n🎯 NEXT STEPS:');
+      if (!firebaseOK) {
+        console.log('1. ❌ Fix Firebase configuration first');
+      } else if (signs.length === 0) {
+        console.log('1. ✅ Firebase connected');
+        console.log('2. 🟡 Click "Create Sample Signs" to add initial data');
+      } else {
+        console.log('1. ✅ Firebase connected');
+        console.log('2. ✅ Signs loaded');
+        console.log('3. 🟡 Upload sign images to /signs/images/ folder');
+        console.log('4. 🟡 Upload sign PDFs to /signs/ folder (named by technical name)');
+      }
+    };
+
+    // Daily sign search functionality
+    function initializeDailySearch() {
+      console.log('Initializing daily search with', signs.length, 'signs');
+      
+      const searchInput = document.getElementById('daily-sign-search');
+      const suggestionsDiv = document.getElementById('daily-sign-suggestions');
+      const hiddenInput = document.getElementById('daily-sign-id');
+      const addBtn = document.getElementById('add-daily-entry-btn');
+      
+      if (!searchInput || !suggestionsDiv || !hiddenInput || !addBtn) {
+        console.error('Daily search elements not found');
+        return;
+      }
+
+      updateDailySearchPlaceholder();
+      
+      // Clear any existing event listeners
+      searchInput.replaceWith(searchInput.cloneNode(true));
+      const newSearchInput = document.getElementById('daily-sign-search');
+      
+      // Input event for real-time search
+      newSearchInput.addEventListener('input', function() {
+        const query = this.value.trim().toLowerCase();
+        selectedSuggestionIndex = -1;
+        
+        if (query.length === 0) {
+          hideSuggestions();
+          clearSelection();
+          return;
+        }
+        
+        // Filter signs based on search query
+        dailySearchSuggestions = signs.filter(sign => {
+          const searchText = (sign.name + ' ' + sign.commonName).toLowerCase();
+          return searchText.includes(query);
+        });
+        
+        showSuggestions(dailySearchSuggestions);
+      });
+      
+      // Keyboard navigation
+      newSearchInput.addEventListener('keydown', function(e) {
+        const suggestionsDiv = document.getElementById('daily-sign-suggestions');
+        const suggestions = suggestionsDiv.querySelectorAll('.suggestion-item');
+        
+        switch(e.key) {
+          case 'ArrowDown':
+            e.preventDefault();
+            if (selectedSuggestionIndex < suggestions.length - 1) {
+              selectedSuggestionIndex++;
+              updateSuggestionHighlight();
+            }
+            break;
+            
+          case 'ArrowUp':
+            e.preventDefault();
+            if (selectedSuggestionIndex > 0) {
+              selectedSuggestionIndex--;
+              updateSuggestionHighlight();
+            }
+            break;
+            
+          case 'Enter':
+            e.preventDefault();
+            if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+              suggestions[selectedSuggestionIndex].click();
+            }
+            break;
+            
+          case 'Escape':
+            hideSuggestions();
+            this.blur();
+            break;
+        }
+      });
+      
+      // Hide suggestions when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('#daily-sign-search') && !e.target.closest('#daily-sign-suggestions')) {
+          hideSuggestions();
+        }
+      });
+    }
+
+    function showSuggestions(suggestions) {
+      const suggestionsDiv = document.getElementById('daily-sign-suggestions');
+      
+      if (suggestions.length === 0) {
+        suggestionsDiv.innerHTML = '<div style="padding:0.75rem;color:#666;text-align:center">No signs found</div>';
+        suggestionsDiv.style.display = 'block';
+        return;
+      }
+      
+      suggestionsDiv.innerHTML = '';
+      
+      suggestions.forEach((sign, index) => {
+        const suggestionItem = document.createElement('div');
+        suggestionItem.className = 'suggestion-item';
+        suggestionItem.innerHTML = `
+          <img src="${sign.imageData}" alt="${sign.name}">
+          <div>
+            <div style="font-weight:500;color:#00345b">${sign.name}</div>
+            <div style="font-size:0.85rem;color:#666">${sign.commonName}</div>
+          </div>
+        `;
+        
+        suggestionItem.addEventListener('click', function() {
+          selectSign(sign);
+        });
+        
+        suggestionsDiv.appendChild(suggestionItem);
+      });
+      
+      suggestionsDiv.style.display = 'block';
+      selectedSuggestionIndex = -1;
+    }
+
+    function hideSuggestions() {
+      document.getElementById('daily-sign-suggestions').style.display = 'none';
+      selectedSuggestionIndex = -1;
+    }
+
+    function updateSuggestionHighlight() {
+      const suggestions = document.querySelectorAll('.suggestion-item');
+      suggestions.forEach((item, index) => {
+        item.classList.toggle('active', index === selectedSuggestionIndex);
+      });
+    }
+
+    function selectSign(sign) {
+      const searchInput = document.getElementById('daily-sign-search');
+      const hiddenInput = document.getElementById('daily-sign-id');
+      const addBtn = document.getElementById('add-daily-entry-btn');
+      
+      searchInput.value = `${sign.name} - ${sign.commonName}`;
+      hiddenInput.value = sign.id;
+      
+      addBtn.disabled = false;
+      addBtn.textContent = '+ Add Entry';
+      addBtn.style.background = '#005a9c';
+      
+      hideSuggestions();
+    }
+
+    function clearSelection() {
+      const hiddenInput = document.getElementById('daily-sign-id');
+      const addBtn = document.getElementById('add-daily-entry-btn');
+      
+      hiddenInput.value = '';
+      addBtn.disabled = true;
+      addBtn.textContent = '+ Select Sign First';
+      addBtn.style.background = '#999';
+    }
+
+    function clearDailySearch() {
+      const searchInput = document.getElementById('daily-sign-search');
+      const suggestionsDiv = document.getElementById('daily-sign-suggestions');
+      
+      if (searchInput) {
+        searchInput.value = '';
+      }
+      if (suggestionsDiv) {
+        suggestionsDiv.style.display = 'none';
+      }
+      
+      clearSelection();
+      updateDailySearchPlaceholder();
+    }
+
+    function updateDailySearchPlaceholder() {
+      const searchInput = document.getElementById('daily-sign-search');
+      if (!searchInput) return;
+      
+      if (signs.length === 0) {
+        searchInput.placeholder = 'No signs available - load signs_library.json first';
+        searchInput.disabled = true;
+      } else {
+        searchInput.placeholder = `Search ${signs.length} signs (TC-21, Stop, Construction...)`;
+        searchInput.disabled = false;
+      }
+    }
+
+    // Add daily entry functionality (basic stub)
+    document.getElementById('add-daily-entry-btn').addEventListener('click', function() {
+      const signId = document.getElementById('daily-sign-id').value;
+      const station = document.getElementById('daily-station').value.trim();
+      const highway = document.getElementById('daily-highway').value.trim();
+      
+      if (!signId) {
+        showNotification('❌ Please select a sign first', 'warning');
+        return;
+      }
+      
+      const sign = signs.find(s => s.id === signId);
+      if (!sign) {
+        showNotification('❌ Selected sign not found', 'warning');
+        return;
+      }
+      
+      if (!dailyEntries) {
+        dailyEntries = [];
+      }
+      
+      // Add entry to daily diary
+      const entry = {
+        id: uuid(),
+        signId: signId,
+        station: station,
+        highway: highway,
+        timestamp: new Date().toISOString()
+      };
+      
+      dailyEntries.push(entry);
+      
+      // Update the table
+      updateDailyDiaryTable();
+      
+      // Clear the form
+      clearDailySearch();
+      document.getElementById('daily-station').value = '';
+      document.getElementById('daily-highway').value = '';
+      
+      showNotification(`✅ Added ${sign.name} to daily diary`);
+    });
+
+    // Update daily diary table
+    function updateDailyDiaryTable() {
+      const tbody = document.getElementById('daily-diary-body');
+      if (!tbody || !dailyEntries) return;
+      
+      tbody.innerHTML = '';
+      
+      if (dailyEntries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#666;padding:1rem">No entries yet</td></tr>';
+        return;
+      }
+      
+      dailyEntries.forEach(entry => {
+        const sign = signs.find(s => s.id === entry.signId);
+        if (!sign) return;
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><img src="${sign.imageData}" style="width:30px;height:30px;object-fit:cover;border:1px solid #ccc;border-radius:4px"></td>
+          <td>${sign.name}<br><small style="color:#666">${sign.commonName}</small></td>
+          <td>${entry.station || '-'}</td>
+          <td>${entry.highway || '-'}</td>
+          <td>
+            <button onclick="removeDailyEntry('${entry.id}')" style="background:none;border:none;color:#d00;cursor:pointer">Remove</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Remove daily entry
+    window.removeDailyEntry = function(entryId) {
+      if (confirm('Remove this entry?')) {
+        dailyEntries = dailyEntries.filter(e => e.id !== entryId);
+        updateDailyDiaryTable();
+        showNotification('✅ Entry removed');
+      }
+    };
+
+    // Global functions for inline onclick handlers
+    window.removeDailyEntry = function(entryId) {
+      if (confirm('Remove this entry?')) {
+        dailyEntries = dailyEntries.filter(e => e.id !== entryId);
+        updateDailyDiaryTable();
+        showNotification('✅ Entry removed');
+      }
+    };
+    
+    window.clearRouteForm = clearRouteForm;
+    window.openSignModal = openSignModal;
 
     // Set today's date as default
     const dateInput = document.getElementById('project-date');
@@ -1235,14 +2201,29 @@
       dateInput.value = new Date().toISOString().split('T')[0];
     }
 
-    // Initial render and auto-initialization
-    updateFileStatus();
+    // Initialize daily search functionality - delayed to ensure DOM is ready
+    setTimeout(() => {
+      console.log('Initial daily search setup');
+      initializeDailySearch();
+    }, 500);
+
+    // Initial render and setup Firebase
     renderSigns();
     renderRoutes();
     renderRouteSelect();
+    renderInspectionList();
     
-    // Auto-create default library if none exists
-    autoInitialize();
+    // Setup Firebase real-time listeners
+    setupFirebaseSignsListener();
+    
+    // Add one initial route entry to show users how the form works
+    setTimeout(() => {
+      if (signs.length > 0) {
+        addRouteEntry();
+      }
+    }, 2000); // Wait a bit longer for Firebase to load
+    
+    } // End of startApplication function
   });
   </script>
 </body>
